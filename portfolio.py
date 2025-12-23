@@ -184,16 +184,17 @@ st.markdown("""
 <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
 
 <style>
-html {
-    zoom: 0.9;  /* ✅ 맨 위에 추가 */
-}            
-
 html, body, .stApp, * {
     font-family: 'Pretendard', sans-serif !important;
 }
-            
-.nav-link, .nav-link-selected {
-    zoom: 1.11 !important;  /* 0.9로 축소된 걸 되돌림 (1/0.9 = 1.11) */
+
+.main > div {
+    zoom: 0.9;
+}
+
+/* ✅ 탭 메뉴 컨테이너는 제외 */
+[data-testid="stHorizontalBlock"] {
+    zoom: 1 !important;
 }
                
 .block-container {
