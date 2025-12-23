@@ -180,7 +180,6 @@ html, body, .stApp, * {
                
 .block-container {
     max-width: 1200px !important;
-    zoom: 0.95; 
     padding-top: 3rem !important;
     padding-left: 2rem;
     padding-right: 2rem;
