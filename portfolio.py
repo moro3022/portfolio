@@ -91,10 +91,6 @@ def calculate_account_summary(df_trade, df_cash, df_dividend, is_us_stock=False)
                 realized_profit += profit
                 hold_qty -= qty
 
-                # ✅ 디버깅: ISA 계좌의 매도 확인
-                if "계좌명" in group.columns and group["계좌명"].iloc[0] == "ISA":
-                    st.write(f"ISA 매도: {name}, 수량: {qty}, 단가: {price}, 손익: {profit}")
-
         if hold_qty > 0:
             try:
                 if str(code) == "펀드":
@@ -143,10 +139,6 @@ def calculate_account_summary(df_trade, df_cash, df_dividend, is_us_stock=False)
         # NaN 체크 추가
         dividend_total = dividend_sum if pd.notna(dividend_sum) else 0
 
-        # ✅ 디버깅: 배당금 확인
-        if "ISA" in account_names:
-            st.write(f"ISA 배당금: {dividend_total}")
-
     # 빈 DataFrame 처리
     if df_summary.empty:
         current_value = 0
@@ -165,6 +157,19 @@ def calculate_account_summary(df_trade, df_cash, df_dividend, is_us_stock=False)
     total_balance = capital + current_profit + actual_profit
     cash = total_balance - current_value
     total_profit_rate = (total_balance - capital) / capital * 100 if capital else 0
+
+
+    # summary 딕셔너리 생성 직전에 추가
+    if not df_trade.empty and "ISA" in str(df_cash["계좌명"].unique() if not df_cash.empty else ""):
+        st.write(f"realized_total: {realized_total}")
+        st.write(f"dividend_total: {dividend_total}")
+        st.write(f"actual_profit 계산 전: {realized_total + dividend_total}")
+
+    actual_profit = realized_total + dividend_total
+    actual_profit = actual_profit if pd.notna(actual_profit) else 0
+
+    if not df_trade.empty and "ISA" in str(df_cash["계좌명"].unique() if not df_cash.empty else ""):
+        st.write(f"actual_profit 계산 후: {actual_profit}")
 
     # NaN 체크를 추가한 summary 딕셔너리
     summary = {
