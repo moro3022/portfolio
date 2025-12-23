@@ -295,7 +295,7 @@ selected_tab = option_menu(
     icons=["back", "geo-alt-fill","geo-alt-fill","geo-alt-fill","geo-alt-fill","geo-alt-fill","grid-1x2-fill"],
     orientation="horizontal",
     styles={
-        "container": {"padding": "0!important", "background-color": "#E0E0E0", "zoom": "1.11", "width": "100%","max-width": "none" },
+        "container": {"padding": "0!important", "background-color": "#E0E0E0"},
         "nav-link": {
             "font-family": "'Pretendard', sans-serif",
             "font-size": "20px",
