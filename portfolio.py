@@ -134,55 +134,6 @@ def calculate_account_summary(df_trade, df_cash, df_dividend, is_us_stock=False)
 
     df_summary = pd.DataFrame(summary_list)
 
-    # ✅ ISA 계좌 실현손익 내역 확인
-    if not df_trade.empty and "계좌명" in df_cash.columns:
-        if "ISA" in df_cash["계좌명"].unique():
-            st.write("### ISA 실현손익 상세 내역")
-            
-            realized_trades = []
-            for code, group in df_trade.groupby("종목코드"):
-                group = group.sort_values("거래일").copy()
-                name = group["종목명"].iloc[0]
-                
-                avg_price = 0
-                hold_qty = 0
-                
-                for _, row in group.iterrows():
-                    if row["구분"] == "매수":
-                        qty = 0 if pd.isna(row["수량"]) else row["수량"]
-                        amt = 0 if pd.isna(row["거래금액"]) else row["거래금액"]
-                        fee = 0 if pd.isna(row["제세금"]) else row["제세금"]
-                        
-                        total_cost = avg_price * hold_qty + amt + fee
-                        hold_qty += qty
-                        avg_price = total_cost / hold_qty if hold_qty != 0 else 0
-                    else:  # 매도
-                        qty = 0 if pd.isna(row["수량"]) else row["수량"]
-                        price = 0 if pd.isna(row["단가"]) else row["단가"]
-                        fee = 0 if pd.isna(row["제세금"]) else row["제세금"]
-                        
-                        profit = (price - avg_price) * qty - fee
-                        
-                        realized_trades.append({
-                            "거래일": row["거래일"],
-                            "종목명": name,
-                            "수량": qty,
-                            "평균단가": avg_price,
-                            "매도단가": price,
-                            "제세금": fee,
-                            "실현손익": profit
-                        })
-                        
-                        hold_qty -= qty
-            
-            if realized_trades:
-                df_realized = pd.DataFrame(realized_trades)
-                df_realized["거래일"] = pd.to_datetime(df_realized["거래일"]).dt.strftime("%Y-%m-%d")
-                st.dataframe(df_realized, use_container_width=True)
-                st.write(f"**총 실현손익: {df_realized['실현손익'].sum():,.0f}원**")
-            else:
-                st.write("매도 내역이 없습니다.")
-
     # 배당금 계산 - NaN 처리 추가
     dividend_total = 0
     if not df_trade.empty and "계좌명" in df_trade.columns:
