@@ -31,10 +31,12 @@ trade_dfs = {
     acct: conn.read(worksheet=acct)
     for acct in TRADE_SHEET_NAMES
 }
-for df in trade_dfs.values():
+for acct, df in trade_dfs.items():
     df.columns = df.columns.str.strip()
     df["거래일"] = pd.to_datetime(df["거래일"])
     df["제세금"] = df["제세금"].fillna(0)
+
+
     # ✅ 유형 열이 있는 경우에만 처리
     if "유형" in df.columns:
         df["유형"] = df["유형"].fillna("미분류")
