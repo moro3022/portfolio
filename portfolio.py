@@ -35,7 +35,7 @@ for acct, df in trade_dfs.items():
     df.columns = df.columns.str.strip()
 
     # ✅ ISA, Pension만 종목코드 특별 처리
-    if acct in ["ISA", "Pension"]:
+    if acct in ["ISA", "Pension", "사주"]:
         df['종목코드'] = df['종목코드'].astype(str).str.split('.').str[0].str.zfill(6)
 
     df["거래일"] = pd.to_datetime(df["거래일"])
