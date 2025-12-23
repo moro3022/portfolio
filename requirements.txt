@@ -1,6 +1,6 @@
 streamlit
 pandas
 yfinance
-FinanceDataReader
+finance-datareader
 streamlit-option-menu
 st-gsheets-connection
