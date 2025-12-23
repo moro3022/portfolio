@@ -33,12 +33,27 @@ trade_dfs = {
 }
 for acct, df in trade_dfs.items():
     df.columns = df.columns.str.strip()
-    df["종목코드"] = df["종목코드"].fillna(0).astype(float).astype(int).astype(str)
-    df["거래일"] = pd.to_datetime(df["거래일"], errors="coerce")
+    df["거래일"] = pd.to_datetime(df["거래일"])
     df["제세금"] = df["제세금"].fillna(0)
+
+    # ✅ 디버깅: 데이터 타입 확인
+    if acct in ["ISA", "Pension", "IRP"]:
+        st.write(f"### {acct} 시트 데이터 타입 확인")
+        st.write(df.dtypes)
+        st.write(f"종목코드 샘플: {df['종목코드'].head()}")
+        st.write(f"단가 샘플: {df['단가'].head()}")
+    
+    # 데이터 타입 변환
+    df["종목코드"] = df["종목코드"].astype(str).str.strip()
     df["단가"] = pd.to_numeric(df["단가"], errors="coerce").fillna(0)
     df["수량"] = pd.to_numeric(df["수량"], errors="coerce").fillna(0)
     df["거래금액"] = pd.to_numeric(df["거래금액"], errors="coerce").fillna(0)
+    
+    if "유형" in df.columns:
+        df["유형"] = df["유형"].fillna("미분류")
+    else:
+        df["유형"] = "미분류"
+
 
     # ✅ 유형 열이 있는 경우에만 처리
     if "유형" in df.columns:
