@@ -143,6 +143,10 @@ def calculate_account_summary(df_trade, df_cash, df_dividend, is_us_stock=False)
         # NaN 체크 추가
         dividend_total = dividend_sum if pd.notna(dividend_sum) else 0
 
+        # ✅ 디버깅: 배당금 확인
+        if "ISA" in account_names:
+            st.write(f"ISA 배당금: {dividend_total}")
+
     # 빈 DataFrame 처리
     if df_summary.empty:
         current_value = 0
