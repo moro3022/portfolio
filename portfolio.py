@@ -34,8 +34,11 @@ trade_dfs = {
 for acct, df in trade_dfs.items():
     df.columns = df.columns.str.strip()
     df["종목코드"] = df["종목코드"].fillna(0).astype(float).astype(int).astype(str)
-    df["거래일"] = pd.to_datetime(df["거래일"])
+    df["거래일"] = pd.to_datetime(df["거래일"], errors="coerce")
     df["제세금"] = df["제세금"].fillna(0)
+    df["단가"] = pd.to_numeric(df["단가"], errors="coerce").fillna(0)
+    df["수량"] = pd.to_numeric(df["수량"], errors="coerce").fillna(0)
+    df["거래금액"] = pd.to_numeric(df["거래금액"], errors="coerce").fillna(0)
 
     # ✅ 유형 열이 있는 경우에만 처리
     if "유형" in df.columns:
