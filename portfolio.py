@@ -91,6 +91,10 @@ def calculate_account_summary(df_trade, df_cash, df_dividend, is_us_stock=False)
                 realized_profit += profit
                 hold_qty -= qty
 
+                # ✅ 디버깅: ISA 계좌의 매도 확인
+                if "계좌명" in group.columns and group["계좌명"].iloc[0] == "ISA":
+                    st.write(f"ISA 매도: {name}, 수량: {qty}, 단가: {price}, 손익: {profit}")
+
         if hold_qty > 0:
             try:
                 if str(code) == "펀드":
