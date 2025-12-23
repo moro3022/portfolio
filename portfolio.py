@@ -192,11 +192,7 @@ html, body, .stApp, * {
     font-family: 'Pretendard', sans-serif !important;
 }
 
-.stElementContainer div {
-        max-width: none !important;
-    }
-
-
+        
 .block-container {
     max-width: 1200px !important;
     padding-top: 3rem !important;
@@ -303,11 +299,13 @@ selected_tab = option_menu(
         "container": {"padding": "0!important", "background-color": "#E0E0E0"},
         "nav-link": {
             "font-family": "'Pretendard', sans-serif",
-            "font-size": "20px",
+            "font-size": "18px",  # 20px에서 18px로 살짝 줄이면 90% 배율에 더 잘 맞습니다.
             "font-weight": "700",
             "color": "#444",
-            "padding": "10px 24px",
+            "padding": "10px 20px", # 패딩도 약간 조절해서 가로 공간 확보
             "border-radius": "12px",
+            "white-space": "nowrap", # ★ 핵심: 글자 줄바꿈을 절대 하지 않음
+            "word-break": "keep-all", # 단어 단위로 끊어지지 않게 함
         },
         "nav-link-selected": {
             "background-color": green_color,
