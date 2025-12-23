@@ -547,7 +547,7 @@ if selected_tab not in ["MIX", "OTH"]:
     LIMITS = {
         "ISA": 40000000,
         "Pension": 3000000,
-        "IRP": 6000000
+        "IRP": 7200000
     }
 
     # 납입액 계산
