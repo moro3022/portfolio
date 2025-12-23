@@ -44,7 +44,7 @@ for acct, df in trade_dfs.items():
         st.write(f"단가 샘플: {df['단가'].head()}")
     
     # 데이터 타입 변환
-    df["종목코드"] = df["종목코드"].astype(str).str.strip()
+    df['종목코드'] = df['종목코드'].astype(str).str.split('.').str[0].str.zfill(6)
     df["단가"] = pd.to_numeric(df["단가"], errors="coerce").fillna(0)
     df["수량"] = pd.to_numeric(df["수량"], errors="coerce").fillna(0)
     df["거래금액"] = pd.to_numeric(df["거래금액"], errors="coerce").fillna(0)
