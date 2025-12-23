@@ -184,17 +184,12 @@ st.markdown("""
 <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
 
 <style>
+html {
+    zoom: 0.9;  /* ✅ 맨 위에 추가 */
+}            
+
 html, body, .stApp, * {
     font-family: 'Pretendard', sans-serif !important;
-}
-
-.main > div {
-    zoom: 0.9;
-}
-
-/* ✅ 탭 메뉴 컨테이너는 제외 */
-[data-testid="stHorizontalBlock"] {
-    zoom: 1 !important;
 }
                
 .block-container {
@@ -300,7 +295,7 @@ selected_tab = option_menu(
     icons=["back", "geo-alt-fill","geo-alt-fill","geo-alt-fill","geo-alt-fill","geo-alt-fill","grid-1x2-fill"],
     orientation="horizontal",
     styles={
-        "container": {"padding": "0!important", "background-color": "#E0E0E0"},
+        "container": {"padding": "0!important", "background-color": "#E0E0E0", "zoom": "1.11"},
         "nav-link": {
             "font-family": "'Pretendard', sans-serif",
             "font-size": "20px",
