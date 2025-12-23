@@ -44,7 +44,7 @@ for df in trade_dfs.values():
 # 배당 시트 불러오기
 df_dividend = conn.read(worksheet="배당")
 df_dividend.columns = df_dividend.columns.str.strip()
-df_dividend["배당금"] = df_dividend["배당금"].astype(int)
+df_dividend["배당금"] = pd.to_numeric(df_dividend["배당금"], errors="coerce").fillna(0).astype(int)
 
 # --- 계산 함수 정의 ---
 @st.cache_data(ttl=300)
