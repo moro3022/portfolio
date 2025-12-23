@@ -187,14 +187,16 @@ st.markdown("""
 html {
     zoom: 0.9;  /* ✅ 맨 위에 추가 */
 }            
-.stElementContainer div {
-        max-width: none !important;
-    }
-                     
+                
 html, body, .stApp, * {
     font-family: 'Pretendard', sans-serif !important;
 }
-               
+
+.stElementContainer div {
+        max-width: none !important;
+    }
+
+
 .block-container {
     max-width: 1200px !important;
     padding-top: 3rem !important;
