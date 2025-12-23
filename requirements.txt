@@ -1,0 +1,6 @@
+streamlit
+pandas
+yfinance
+FinanceDataReader
+streamlit-option-menu
+st-gsheets-connection
