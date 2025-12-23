@@ -183,11 +183,7 @@ st.set_page_config(layout="wide")
 st.markdown("""
 <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
 
-<style>
-html {
-    zoom: 0.9;  /* ✅ 맨 위에 추가 */
-}            
-
+<style>      
 html, body, .stApp, * {
     font-family: 'Pretendard', sans-serif !important;
 }
