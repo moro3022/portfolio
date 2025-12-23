@@ -37,7 +37,7 @@ for acct, df in trade_dfs.items():
     df["제세금"] = df["제세금"].fillna(0)
 
     # ✅ 디버깅: 데이터 타입 확인
-    if acct in ["ISA", "Pension"]:
+    if acct in ["ISA", "Pension", "IRP"]:
         st.write(f"### {acct} 시트 데이터 타입 확인")
         st.write(df.dtypes)
         st.write(f"종목코드 샘플: {df['종목코드'].head()}")
