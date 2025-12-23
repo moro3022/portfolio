@@ -39,7 +39,10 @@ for acct, df in trade_dfs.items():
         df['종목코드'] = df['종목코드'].astype(str).str.split('.').str[0].str.zfill(6)
 
     df["거래일"] = pd.to_datetime(df["거래일"])
-    df["제세금"] = df["제세금"].fillna(0)
+    df["제세금"] = pd.to_numeric(df["제세금"], errors="coerce").fillna(0)
+    df["단가"] = pd.to_numeric(df["단가"], errors="coerce").fillna(0)
+    df["수량"] = pd.to_numeric(df["수량"], errors="coerce").fillna(0)
+    df["거래금액"] = pd.to_numeric(df["거래금액"], errors="coerce").fillna(0)
 
 
     # ✅ 유형 열이 있는 경우에만 처리
@@ -157,19 +160,6 @@ def calculate_account_summary(df_trade, df_cash, df_dividend, is_us_stock=False)
     total_balance = capital + current_profit + actual_profit
     cash = total_balance - current_value
     total_profit_rate = (total_balance - capital) / capital * 100 if capital else 0
-
-
-    # summary 딕셔너리 생성 직전에 추가
-    if not df_trade.empty and "ISA" in str(df_cash["계좌명"].unique() if not df_cash.empty else ""):
-        st.write(f"realized_total: {realized_total}")
-        st.write(f"dividend_total: {dividend_total}")
-        st.write(f"actual_profit 계산 전: {realized_total + dividend_total}")
-
-    actual_profit = realized_total + dividend_total
-    actual_profit = actual_profit if pd.notna(actual_profit) else 0
-
-    if not df_trade.empty and "ISA" in str(df_cash["계좌명"].unique() if not df_cash.empty else ""):
-        st.write(f"actual_profit 계산 후: {actual_profit}")
 
     # NaN 체크를 추가한 summary 딕셔너리
     summary = {
