@@ -191,6 +191,10 @@ html {
 html, body, .stApp, * {
     font-family: 'Pretendard', sans-serif !important;
 }
+            
+.nav-link, .nav-link-selected {
+    zoom: 1.11 !important;  /* 0.9로 축소된 걸 되돌림 (1/0.9 = 1.11) */
+}
                
 .block-container {
     max-width: 1200px !important;
