@@ -463,6 +463,9 @@ elif acct == "MIX":
     us_value = summary_us["current_value"] + summary_us["cash"]
     us_profit = summary_us["total_profit"]
 
+    # ✅ WRAP (원화 환산)
+    wrap_value_krw = wrap_value
+
     # ESOP
     df_trade_esop = trade_dfs["사주"]
     df_cash_esop = cash_df[cash_df["계좌명"] == "사주"]
@@ -1020,7 +1023,7 @@ def make_holdings_card(df_summary, summary, theme_color, title="Holdings", curre
 # 5. MIX 탭 --
 if selected_tab == "MIX":
     us_value_krw = us_value * exchange_rate
-    
+
     lv_df = conn.read(worksheet="LV")
     lv_df.columns = lv_df.columns.str.strip()
 
@@ -1029,7 +1032,8 @@ if selected_tab == "MIX":
     esop_profit = summary_esop["total_profit"]
     mix_total_profit = local_total_summary["total_profit"] + us_profit + esop_profit + lv_profit
 
-    total_stock = local_value + pension_value + us_value_krw + esop_value + lv_value
+    total_stock = local_value + pension_value + us_value_krw + wrap_value_krw + esop_value + lv_value
+    
     total_cash = savings + housing + deposit
     total_asset = total_stock + total_cash
 
@@ -1095,7 +1099,7 @@ if selected_tab == "MIX":
         <div class="item-label">Local</div>
         <div class="item-return">{local_value:,.0f}</div>
     </div>
-        <div class="mix-item" style="display: flex; justify-content: space-between; align-items: baseline;">
+    <div class="mix-item" style="display: flex; justify-content: space-between; align-items: baseline;">
         <div class="item-label">Pension</div>
         <div class="item-return">{pension_value:,.0f}</div>
     </div>
@@ -1110,6 +1114,10 @@ if selected_tab == "MIX":
     <div class="mix-item" style="display: flex; justify-content: space-between; align-items: baseline;">
         <div class="item-label">US</div>
         <div class="item-return">$ {us_value:,.0f}</div>
+    </div>
+    <div class="mix-item" style="display: flex; justify-content: space-between; align-items: baseline;">
+        <div class="item-label">WRAP</div>
+        <div class="item-return">$ {wrap_value_usd:,.0f}</div>
     </div>
     </div>
     """
