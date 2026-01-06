@@ -1037,12 +1037,13 @@ if selected_tab == "MIX":
     mix_total_profit = local_total_summary["total_profit"] + us_profit + esop_profit + lv_profit
 
     total_stock = local_value + pension_value + us_value_krw + wrap_value_krw + esop_value + lv_value
-    
     total_cash = savings + housing + deposit
     total_asset = total_stock + total_cash
 
-    cash_ratio = total_cash / total_asset
-    stock_ratio = 1 - cash_ratio
+    # ✅ 비율 계산 시 housing 제외
+    total_asset_for_ratio = total_stock + savings + deposit
+    cash_ratio = (savings + deposit) / total_asset_for_ratio
+    stock_ratio = total_stock / total_asset_for_ratio
 
     icon_asset = "https://cdn-icons-png.flaticon.com/128/3914/3914398.png"
     icon_stock = "https://cdn-icons-png.flaticon.com/128/15852/15852070.png"
