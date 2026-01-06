@@ -56,6 +56,13 @@ df_dividend = conn.read(worksheet="배당")
 df_dividend.columns = df_dividend.columns.str.strip()
 df_dividend["배당금"] = pd.to_numeric(df_dividend["배당금"], errors="coerce").fillna(0).astype(int)
 
+# ✅ WRAP 시트에서 K1, M1 셀 읽기
+wrap_capital_df = conn.read(worksheet="WRAP", usecols=[10], nrows=1, header=None)
+wrap_capital = float(wrap_capital_df.iloc[0, 0]) if not wrap_capital_df.empty else 0
+
+wrap_value_df = conn.read(worksheet="WRAP", usecols=[12], nrows=1, header=None)
+wrap_value = float(wrap_value_df.iloc[0, 0]) if not wrap_value_df.empty else 0
+
 # --- 계산 함수 정의 ---
 @st.cache_data(ttl=300)
 def get_price_data(code: str, source: str = "fdr"):
@@ -402,7 +409,7 @@ if acct == "전체":
              .agg({"매입금액":"sum","평가금액":"sum"})
              .sort_values("평가금액", ascending=False)
     )
-
+    
 elif acct == "MIX":
     local_accounts = ["ISA", "ETF"]
     local_value, local_cash = 0, 0
