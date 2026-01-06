@@ -18,11 +18,9 @@ cash_df = conn.read(worksheet="입출금")
 cash_df.columns = cash_df.columns.str.strip()
 cash_df["거래일"] = pd.to_datetime(cash_df["거래일"])
 
-# ✅ 환율 시트 불러오기
-exchange_df = conn.read(worksheet="환율")
-exchange_df.columns = exchange_df.columns.str.strip()
-exchange_df["날짜"] = pd.to_datetime(exchange_df["날짜"])
-exchange_df = exchange_df.set_index("날짜")
+# ✅ WRAP 시트에서 환율(O1 셀) 읽기
+exchange_rate_df = conn.read(worksheet="WRAP", usecols=[14], nrows=1, header=None)
+exchange_rate = float(exchange_rate_df.iloc[0, 0]) if not exchange_rate_df.empty else 1400
 
 # 각 계좌 시트 불러오기
 TRADE_SHEET_NAMES = [name for name in ACCOUNT_NAMES if name not in ["LV"]]
@@ -56,12 +54,16 @@ df_dividend = conn.read(worksheet="배당")
 df_dividend.columns = df_dividend.columns.str.strip()
 df_dividend["배당금"] = pd.to_numeric(df_dividend["배당금"], errors="coerce").fillna(0).astype(int)
 
-# ✅ WRAP 시트에서 K1, M1 셀 읽기
+# ✅ WRAP 시트에서 K1(원금), M1(평가액), O1(환율) 셀 읽기
 wrap_capital_df = conn.read(worksheet="WRAP", usecols=[10], nrows=1, header=None)
-wrap_capital = float(wrap_capital_df.iloc[0, 0]) if not wrap_capital_df.empty else 0
+wrap_capital_usd = float(wrap_capital_df.iloc[0, 0]) if not wrap_capital_df.empty else 0
 
 wrap_value_df = conn.read(worksheet="WRAP", usecols=[12], nrows=1, header=None)
-wrap_value = float(wrap_value_df.iloc[0, 0]) if not wrap_value_df.empty else 0
+wrap_value_usd = float(wrap_value_df.iloc[0, 0]) if not wrap_value_df.empty else 0
+
+# 원화 환산
+wrap_capital = wrap_capital_usd * exchange_rate
+wrap_value = wrap_value_usd * exchange_rate
 
 # --- 계산 함수 정의 ---
 @st.cache_data(ttl=300)
@@ -374,14 +376,12 @@ if acct == "전체":
     df_us_summary, _ = calculate_account_summary(df_trade_us, df_cash_us, df_dividend)
 
     # 환율 시트의 최신 기준환율 (제일 마지막 행)
-    latest_fx = float(pd.to_numeric(exchange_df["기준환율"].iloc[-1], errors="coerce"))
-
     if not df_us_summary.empty:
         df_us_krw = df_us_summary[["유형", "매입금액", "평가금액"]].copy()
         df_us_krw[["매입금액","평가금액"]] = (
             df_us_krw[["매입금액","평가금액"]]
             .apply(pd.to_numeric, errors="coerce").fillna(0)
-            * latest_fx
+            * exchange_rate
         ).round().astype(int)
         df_all = pd.concat([df_local, df_us_krw], ignore_index=True)
     else:
@@ -407,9 +407,12 @@ if acct == "전체":
     df_cash_esop = cash_df[cash_df["계좌명"] == "사주"]
     _, summary_esop = calculate_account_summary(df_trade_esop, df_cash_esop, df_dividend)
     
+    # 매입금액 직접 계산 (매도 없으므로 단가 * 수량)
+    esop_capital = (df_trade_esop["단가"] * df_trade_esop["수량"]).sum()
+    
     df_esop = pd.DataFrame({
         "유형": ["금융"],
-        "매입금액": [summary_esop["capital"]],
+        "매입금액": [esop_capital],
         "평가금액": [summary_esop["current_value"]]
     })
 
@@ -572,7 +575,7 @@ if selected_tab not in ["MIX", "OTH"]:
     current_year = datetime.now().year
 
     LIMITS = {
-        "ISA": 40000000,
+        "ISA": 60000000,
         "Pension": 3000000,
         "IRP": 7200000
     }
@@ -1016,10 +1019,8 @@ def make_holdings_card(df_summary, summary, theme_color, title="Holdings", curre
 
 # 5. MIX 탭 --
 if selected_tab == "MIX":
-    usdkrw = fdr.DataReader('USD/KRW')
-    exchange_rate = usdkrw['Close'].iloc[-1]
     us_value_krw = us_value * exchange_rate
-
+    
     lv_df = conn.read(worksheet="LV")
     lv_df.columns = lv_df.columns.str.strip()
 
