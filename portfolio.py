@@ -371,30 +371,13 @@ if acct == "전체":
     # US 계좌 요약 계산
     df_trade_us = trade_dfs["US"]
     df_cash_us = cash_df[cash_df["계좌명"] == "US"]
-    df_us_summary, _summary_us = calculate_account_summary(df_trade_us, df_cash_us, df_dividend, is_us_stock=True)
-
-    # 환율 시트의 최신 기준환율 (제일 마지막 행)
-    latest_fx = float(exchange_df["기준환율"].iloc[-1])
-
-    if not df_us_summary.empty:
-        df_us_krw = df_us_summary[["유형", "매입금액", "평가금액"]].copy()
-        df_us_krw["매입금액"] = (df_us_krw["매입금액"] * latest_fx).round().astype(int)
-        df_us_krw["평가금액"] = (df_us_krw["평가금액"] * latest_fx).round().astype(int)
-        df_all = pd.concat([df_local, df_us_krw], ignore_index=True)
-    else:
-        df_all = df_local
-
-    # 유형별 집계 (로컬 + US[KRW 환산])
-    df_local = df_summary[["유형","매입금액","평가금액"]].copy()
-
-    df_trade_us = trade_dfs["US"]
-    df_cash_us  = cash_df[cash_df["계좌명"] == "US"]
     df_us_summary, _ = calculate_account_summary(df_trade_us, df_cash_us, df_dividend)
 
+    # 환율 시트의 최신 기준환율 (제일 마지막 행)
     latest_fx = float(pd.to_numeric(exchange_df["기준환율"].iloc[-1], errors="coerce"))
 
     if not df_us_summary.empty:
-        df_us_krw = df_us_summary[["유형","매입금액","평가금액"]].copy()
+        df_us_krw = df_us_summary[["유형", "매입금액", "평가금액"]].copy()
         df_us_krw[["매입금액","평가금액"]] = (
             df_us_krw[["매입금액","평가금액"]]
             .apply(pd.to_numeric, errors="coerce").fillna(0)
@@ -404,12 +387,49 @@ if acct == "전체":
     else:
         df_all = df_local
 
+    # ✅ LV 데이터 추가
+    lv_cash = cash_df[cash_df["계좌명"] == "LV"]
+    lv_balance = lv_cash[lv_cash["구분"] == "입금"]["금액"].sum() - lv_cash[lv_cash["구분"] == "출금"]["금액"].sum()
+    
+    lv_df = conn.read(worksheet="LV")
+    lv_df.columns = lv_df.columns.str.strip()
+    lv_profit = pd.to_numeric(lv_df["손익"], errors="coerce").sum()
+    lv_value = lv_balance + lv_profit
+    
+    df_lv = pd.DataFrame({
+        "유형": ["코스피"],
+        "매입금액": [lv_balance],
+        "평가금액": [lv_value]
+    })
+
+    # ✅ ESOP 데이터 추가
+    df_trade_esop = trade_dfs["사주"]
+    df_cash_esop = cash_df[cash_df["계좌명"] == "사주"]
+    _, summary_esop = calculate_account_summary(df_trade_esop, df_cash_esop, df_dividend)
+    
+    df_esop = pd.DataFrame({
+        "유형": ["금융"],
+        "매입금액": [summary_esop["capital"]],
+        "평가금액": [summary_esop["current_value"]]
+    })
+
+    # ✅ WRAP 데이터 추가
+    df_wrap = pd.DataFrame({
+        "유형": ["WRAP"],
+        "매입금액": [wrap_capital],
+        "평가금액": [wrap_value]
+    })
+
+    # ✅ 전체 데이터 합치기
+    df_all = pd.concat([df_all, df_lv, df_esop, df_wrap], ignore_index=True)
+
+    # 유형별 집계
     weighting_summary = (
         df_all.groupby("유형", as_index=False)
              .agg({"매입금액":"sum","평가금액":"sum"})
              .sort_values("평가금액", ascending=False)
     )
-    
+
 elif acct == "MIX":
     local_accounts = ["ISA", "ETF"]
     local_value, local_cash = 0, 0
