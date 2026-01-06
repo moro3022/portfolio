@@ -779,8 +779,12 @@ if selected_tab == "전체":
 
     total_purchase = float(_ws["매입금액"].sum())
     total_value = float(_ws["평가금액"].sum())
-    total_profit = float(_ws["수익금"].sum())
-    total_rate = (total_profit / total_purchase * 100) if total_purchase > 0 else 0.0
+
+    # ✅ Total 수익 및 수익률 계산 (금융, 코스피 제외)
+    _ws_exclude = _ws[~_ws["유형"].isin(["금융", "코스피"])].copy()
+    total_profit = float(_ws_exclude["수익금"].sum())
+    total_purchase_exclude = float(_ws_exclude["매입금액"].sum())
+    total_rate = (total_profit / total_purchase_exclude * 100) if total_purchase_exclude > 0 else 0.0
 
     _ws = _ws.sort_values("평가금액", ascending=False).reset_index(drop=True)
 
