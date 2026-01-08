@@ -1047,7 +1047,7 @@ if selected_tab == "성과":
                     <div style="position: absolute; width: 56px; height: 56px; background: white;
                                 border-radius: 50%; top: 12px; left: 12px;"></div>
                     <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-                                font-size: 16px; font-weight: 700; color: {strategy['color']}; z-index: 10;">
+                                font-size: 14px; font-weight: 700; color: {strategy['color']}; z-index: 10;">
                         {strategy['weight']}%
                     </div>
                 </div>
