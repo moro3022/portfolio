@@ -356,7 +356,7 @@ red_color = "#C54E4A"
 selected_tab = option_menu(
     menu_title=None,
     options=ACCOUNT_NAMES,
-    icons=["back", "geo-alt-fill","geo-alt-fill","geo-alt-fill","geo-alt-fill","geo-alt-fill","clipboard-data"],
+    icons=["back", "geo-alt-fill","geo-alt-fill","geo-alt-fill","geo-alt-fill","geo-alt-fill","file-bar-graph"],
     orientation="horizontal",
     styles={
         "container": {"padding": "0!important", "background-color": "#E0E0E0"},
@@ -1125,3 +1125,4 @@ else:
         with col_right:
 
             st.markdown(card_html_stock, unsafe_allow_html=True)
+
