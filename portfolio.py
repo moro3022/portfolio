@@ -1034,7 +1034,7 @@ if selected_tab == "성과":
     strategy_items = ""
     for strategy in strategies:
         strategy_items += f"""
-            <div style="display: grid; grid-template-columns: 100px 2fr 2fr 1.5fr;
+            <div style="display: grid; grid-template-columns: 100px 2fr 2fr 1fr;
                         padding: 18px 20px; align-items: center;
                         border-bottom: 1px solid #f0f0f0;
                         transition: background 0.2s ease; cursor: pointer;"
@@ -1081,7 +1081,7 @@ if selected_tab == "성과":
     <div class="card" style="height: 100%;">
         <div class="card-title">Strategy Performance</div>
         
-        <div style="display: grid; grid-template-columns: 100px 2fr 2fr 1.5fr;
+        <div style="display: grid; grid-template-columns: 100px 2fr 2fr 1fr;
                     padding: 16px 20px; margin-top: 20px;
                     background: #f8f9fa; border-radius: 8px;
                     font-size: 13px; font-weight: 600; color: #6c757d;">
