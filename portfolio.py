@@ -981,7 +981,7 @@ if selected_tab == "성과":
                             background: #f8f9fa; padding: 14px 16px; border-radius: 10px;">
                     <div style="font-size: 13px; font-weight: 600; color: #555;">Stock</div>
                     <div style="font-size: 18px; font-weight: 700; color: #0f2f76;">{int(stock_value_ov):,}</div>
-                    <div style="background: #ffb601; color: white;
+                    <div style="background: #778ad5; color: white;
                                 padding: 6px 14px; border-radius: 8px;
                                 font-size: 13px; font-weight: 700; width: 70px; text-align: center;">
                         {stock_ratio_ov:.1f}%
@@ -994,7 +994,7 @@ if selected_tab == "성과":
                             background: #f8f9fa; padding: 14px 16px; border-radius: 10px;">
                     <div style="font-size: 13px; font-weight: 600; color: #555;">Cash</div>
                     <div style="font-size: 18px; font-weight: 700; color: #0f2f76;">{int(cash_value_ov):,}</div>
-                    <div style="background: #7777ec; color: white;
+                    <div style="background: #b2c2ff; color: white;
                                 padding: 6px 14px; border-radius: 8px;
                                 font-size: 13px; font-weight: 700; width: 70px; text-align: center;">
                         {cash_ratio_ov:.1f}%
@@ -1011,12 +1011,12 @@ if selected_tab == "성과":
             
             <div style="display: flex; flex-direction: column; gap: 8px;">
                 <!-- US -->
-                <div style="display: grid; grid-template-columns: 80px 1fr auto;
+                <div style="display: grid; grid-template-columns: 80px 1fr 120px auto;
                             align-items: center; gap: 16px;
                             background: #f8f9fa; padding: 14px 16px; border-radius: 10px;">
                     <div style="font-size: 13px; font-weight: 600; color: #555;">US</div>
-                    <div style="font-size: 18px; font-weight: 700; color: #0f2f76;">{int(us_value):,}</div>
-                    <div style="background: #ffb601; color: white;
+                    <div style="font-size: 18px; font-weight: 700; color: #0f2f76; text-align: right">{int(us_value):,}</div>
+                    <div style="background: #778ad5; color: white;
                                 padding: 6px 14px; border-radius: 8px;
                                 font-size: 13px; font-weight: 700; width: 70px; text-align: center;">
                         {us_ratio:.1f}%
@@ -1024,12 +1024,12 @@ if selected_tab == "성과":
                 </div>
                 
                 <!-- KR -->
-                <div style="display: grid; grid-template-columns: 80px 1fr auto;
+                <div style="display: grid; grid-template-columns: 80px 1fr 120px auto;
                             align-items: center; gap: 16px;
                             background: #f8f9fa; padding: 14px 16px; border-radius: 10px;">
                     <div style="font-size: 13px; font-weight: 600; color: #555;">KR</div>
-                    <div style="font-size: 18px; font-weight: 700; color: #0f2f76;">{int(kr_value):,}</div>
-                    <div style="background: #7777ec; color: white;
+                    <div style="font-size: 18px; font-weight: 700; color: #0f2f76; text-align: right">{int(kr_value):,}</div>
+                    <div style="background: #b2c2ff; color: white;
                                 padding: 6px 14px; border-radius: 8px;
                                 font-size: 13px; font-weight: 700; width: 70px; text-align: center;">
                         {kr_ratio:.1f}%
