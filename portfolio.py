@@ -759,14 +759,13 @@ if selected_tab == "IRP":
 card_html_stock += "</div>"
 
 
-# 성과 탭 레이아웃 구성 #
+# ========================================
+# 성과 탭 - 실제 데이터 연결 코드
+# ========================================
+
 def clean_html(html_string):
     return ''.join(line.strip() for line in html_string.splitlines())
 
-# ========================================
-# 성과 탭 - 실제 데이터 연결 코드
-# 기존 코드의 "성과 탭 레이아웃 구성" 부분을 아래 코드로 교체
-# ========================================
 
 if selected_tab == "성과":
     # --- 1. 전략별 데이터 계산 ---
@@ -837,8 +836,8 @@ if selected_tab == "성과":
         lv_df = conn.read(worksheet="LV")
         lv_df.columns = lv_df.columns.str.strip()
         
-        # C열(손익) 합계
-        lv_profit = pd.to_numeric(lv_df.iloc[1:, 2], errors="coerce").sum()  # C2부터 (index 1부터)
+        # 손익 컬럼 합계
+        lv_profit = pd.to_numeric(lv_df["손익"], errors="coerce").sum()
         lv_capital = 10000000
         lv_value = lv_profit + lv_capital
         lv_return = (lv_profit / lv_capital * 100) if lv_capital > 0 else 0
