@@ -966,63 +966,73 @@ if selected_tab == "성과":
     
     allocation_html = clean_html(f"""
     <div class="card">
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-            <!-- Asset Allocation Card -->
-            <div style="background: linear-gradient(135deg, #6374b908 0%, #6374b902 100%);
-                        border-radius: 12px; padding: 24px;">
-                <div style="font-size: 13px; font-weight: 600; color: #7F8C8D; margin-bottom: 16px;">
-                    ASSET ALLOCATION
+        <div class="card-title">Asset & Country Allocation</div>
+        
+        <!-- Asset Allocation -->
+        <div style="margin-top: 20px; margin-bottom: 24px;">
+            <div style="font-size: 14px; font-weight: 600; color: #7F8C8D; margin-bottom: 12px; padding-left: 8px;">
+                ASSET ALLOCATION
+            </div>
+            
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+                <!-- Stock -->
+                <div style="display: grid; grid-template-columns: 80px 1fr auto;
+                            align-items: center; gap: 16px;
+                            background: #f8f9fa; padding: 14px 16px; border-radius: 10px;">
+                    <div style="font-size: 13px; font-weight: 600; color: #555;">Stock</div>
+                    <div style="font-size: 18px; font-weight: 700; color: #0f2f76;">{int(stock_value_ov):,}</div>
+                    <div style="background: #6374b9; color: white;
+                                padding: 6px 14px; border-radius: 8px;
+                                font-size: 13px; font-weight: 700; min-width: 60px; text-align: center;">
+                        {stock_ratio_ov:.1f}%
+                    </div>
                 </div>
                 
-                <div style="display: flex; flex-direction: column; gap: 16px;">
-                    <!-- Stock -->
-                    <div>
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
-                            <span style="font-size: 14px; font-weight: 500; color: #555;">Stock</span>
-                            <span style="font-size: 14px; font-weight: 700; color: #6374b9;">{stock_ratio_ov:.1f}%</span>
-                        </div>
-                        <div style="font-size: 22px; font-weight: 700; color: #0f2f76;">{int(stock_value_ov):,}</div>
-                    </div>
-                    
-                    <div style="height: 1px; background: #e5e5e5;"></div>
-                    
-                    <!-- Cash -->
-                    <div>
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
-                            <span style="font-size: 14px; font-weight: 500; color: #555;">Cash</span>
-                            <span style="font-size: 14px; font-weight: 700; color: #95a5a6;">{cash_ratio_ov:.1f}%</span>
-                        </div>
-                        <div style="font-size: 22px; font-weight: 700; color: #0f2f76;">{int(cash_value_ov):,}</div>
+                <!-- Cash -->
+                <div style="display: grid; grid-template-columns: 80px 1fr auto;
+                            align-items: center; gap: 16px;
+                            background: #f8f9fa; padding: 14px 16px; border-radius: 10px;">
+                    <div style="font-size: 13px; font-weight: 600; color: #555;">Cash</div>
+                    <div style="font-size: 18px; font-weight: 700; color: #0f2f76;">{int(cash_value_ov):,}</div>
+                    <div style="background: #95a5a6; color: white;
+                                padding: 6px 14px; border-radius: 8px;
+                                font-size: 13px; font-weight: 700; min-width: 60px; text-align: center;">
+                        {cash_ratio_ov:.1f}%
                     </div>
                 </div>
             </div>
+        </div>
+        
+        <!-- Country Allocation -->
+        <div style="margin-top: 24px;">
+            <div style="font-size: 14px; font-weight: 600; color: #7F8C8D; margin-bottom: 12px; padding-left: 8px;">
+                COUNTRY ALLOCATION
+            </div>
             
-            <!-- Country Allocation Card -->
-            <div style="background: linear-gradient(135deg, #778AD508 0%, #778AD502 100%);
-                        border-radius: 12px; padding: 24px;">
-                <div style="font-size: 13px; font-weight: 600; color: #7F8C8D; margin-bottom: 16px;">
-                    COUNTRY ALLOCATION
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+                <!-- US -->
+                <div style="display: grid; grid-template-columns: 80px 1fr auto;
+                            align-items: center; gap: 16px;
+                            background: #f8f9fa; padding: 14px 16px; border-radius: 10px;">
+                    <div style="font-size: 13px; font-weight: 600; color: #555;">US</div>
+                    <div style="font-size: 18px; font-weight: 700; color: #0f2f76;">{int(us_value):,}</div>
+                    <div style="background: #778AD5; color: white;
+                                padding: 6px 14px; border-radius: 8px;
+                                font-size: 13px; font-weight: 700; min-width: 60px; text-align: center;">
+                        {us_ratio:.1f}%
+                    </div>
                 </div>
                 
-                <div style="display: flex; flex-direction: column; gap: 16px;">
-                    <!-- US -->
-                    <div>
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
-                            <span style="font-size: 14px; font-weight: 500; color: #555;">US</span>
-                            <span style="font-size: 14px; font-weight: 700; color: #778AD5;">{us_ratio:.1f}%</span>
-                        </div>
-                        <div style="font-size: 22px; font-weight: 700; color: #0f2f76;">{int(us_value):,}</div>
-                    </div>
-                    
-                    <div style="height: 1px; background: #e5e5e5;"></div>
-                    
-                    <!-- KR -->
-                    <div>
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
-                            <span style="font-size: 14px; font-weight: 500; color: #555;">KR</span>
-                            <span style="font-size: 14px; font-weight: 700; color: #5BA17B;">{kr_ratio:.1f}%</span>
-                        </div>
-                        <div style="font-size: 22px; font-weight: 700; color: #0f2f76;">{int(kr_value):,}</div>
+                <!-- KR -->
+                <div style="display: grid; grid-template-columns: 80px 1fr auto;
+                            align-items: center; gap: 16px;
+                            background: #f8f9fa; padding: 14px 16px; border-radius: 10px;">
+                    <div style="font-size: 13px; font-weight: 600; color: #555;">KR</div>
+                    <div style="font-size: 18px; font-weight: 700; color: #0f2f76;">{int(kr_value):,}</div>
+                    <div style="background: #5BA17B; color: white;
+                                padding: 6px 14px; border-radius: 8px;
+                                font-size: 13px; font-weight: 700; min-width: 60px; text-align: center;">
+                        {kr_ratio:.1f}%
                     </div>
                 </div>
             </div>
