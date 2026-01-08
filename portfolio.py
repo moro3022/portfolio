@@ -1062,7 +1062,7 @@ if selected_tab == "성과":
                     <div style="font-size: 17px; font-weight: 600; color: #2C3E50;">
                         {strategy['value']:,}
                     </div>
-                    <div style="font-size: 15px; font-weight: 600; color: {'#27AE60' if strategy['profit'] >= 0 else '#C54E4A'};">
+                    <div style="font-size: 15px; font-weight: 600; color: {'#3A866A' if strategy['profit'] >= 0 else '#C54E4A'};">
                         {'+' if strategy['profit'] >= 0 else ''}{strategy['profit']:,}
                     </div>
                 </div>
