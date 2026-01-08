@@ -983,7 +983,7 @@ if selected_tab == "성과":
                     <div style="font-size: 18px; font-weight: 700; color: #0f2f76;">{int(stock_value_ov):,}</div>
                     <div style="background: #6374b9; color: white;
                                 padding: 6px 14px; border-radius: 8px;
-                                font-size: 13px; font-weight: 700; min-width: 60px; text-align: center;">
+                                font-size: 13px; font-weight: 700; width: 70px; text-align: center;">
                         {stock_ratio_ov:.1f}%
                     </div>
                 </div>
