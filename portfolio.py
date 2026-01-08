@@ -1011,7 +1011,7 @@ if selected_tab == "성과":
             
             <div style="display: flex; flex-direction: column; gap: 8px;">
                 <!-- US -->
-                <div style="display: grid; grid-template-columns: 80px 1fr auto;
+                <div style="display: grid; grid-template-columns: 80px auto;
                             align-items: center; gap: 16px;
                             background: #f8f9fa; padding: 14px 16px; border-radius: 10px;">
                     <div style="font-size: 13px; font-weight: 600; color: #555;">US</div>
@@ -1024,7 +1024,7 @@ if selected_tab == "성과":
                 </div>
                 
                 <!-- KR -->
-                <div style="display: grid; grid-template-columns: 80px 1fr auto;
+                <div style="display: grid; grid-template-columns: 80px 2fr 1fr;
                             align-items: center; gap: 16px;
                             background: #f8f9fa; padding: 14px 16px; border-radius: 10px;">
                     <div style="font-size: 13px; font-weight: 600; color: #555;">KR</div>
