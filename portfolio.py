@@ -356,7 +356,7 @@ red_color = "#C54E4A"
 selected_tab = option_menu(
     menu_title=None,
     options=ACCOUNT_NAMES,
-    icons=["back", "geo-alt-fill","geo-alt-fill","geo-alt-fill","geo-alt-fill","geo-alt-fill","back"],
+    icons=["back", "geo-alt-fill","geo-alt-fill","geo-alt-fill","geo-alt-fill","geo-alt-fill","Clipboard data"],
     orientation="horizontal",
     styles={
         "container": {"padding": "0!important", "background-color": "#E0E0E0"},
