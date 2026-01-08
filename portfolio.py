@@ -996,7 +996,7 @@ if selected_tab == "성과":
                     <div style="font-size: 18px; font-weight: 700; color: #0f2f76;">{int(cash_value_ov):,}</div>
                     <div style="background: #95a5a6; color: white;
                                 padding: 6px 14px; border-radius: 8px;
-                                font-size: 13px; font-weight: 700; min-width: 60px; text-align: center;">
+                                font-size: 13px; font-weight: 700; width: 70px; text-align: center;">
                         {cash_ratio_ov:.1f}%
                     </div>
                 </div>
@@ -1018,7 +1018,7 @@ if selected_tab == "성과":
                     <div style="font-size: 18px; font-weight: 700; color: #0f2f76;">{int(us_value):,}</div>
                     <div style="background: #778AD5; color: white;
                                 padding: 6px 14px; border-radius: 8px;
-                                font-size: 13px; font-weight: 700; min-width: 60px; text-align: center;">
+                                font-size: 13px; font-weight: 700; width: 70px; text-align: center;">
                         {us_ratio:.1f}%
                     </div>
                 </div>
@@ -1031,7 +1031,7 @@ if selected_tab == "성과":
                     <div style="font-size: 18px; font-weight: 700; color: #0f2f76;">{int(kr_value):,}</div>
                     <div style="background: #5BA17B; color: white;
                                 padding: 6px 14px; border-radius: 8px;
-                                font-size: 13px; font-weight: 700; min-width: 60px; text-align: center;">
+                                font-size: 13px; font-weight: 700; width: 70px; text-align: center;">
                         {kr_ratio:.1f}%
                     </div>
                 </div>
