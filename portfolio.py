@@ -1088,7 +1088,7 @@ if selected_tab == "성과":
         """
     
     strategy_html = clean_html(f"""
-    <div class="card" style="height: 800px;">
+    <div class="card" style="height: 780px;">
         <div class="card-title">Strategy Performance</div>
         
         <div style="display: grid; grid-template-columns: 100px 2fr 2fr 1.5fr;
