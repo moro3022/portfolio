@@ -1018,7 +1018,7 @@ if selected_tab == "성과":
                     <div style="font-size: 18px; font-weight: 700; color: #0f2f76; text-align: right">{int(us_value):,}</div>
                     <div style="background: #778ad5; color: white;
                                 padding: 6px 14px; border-radius: 8px;
-                                font-size: 13px; font-weight: 700; width: 70px; text-align: center;">
+                                font-size: 13px; font-weight: 700; width: 70px; text-align: right;">
                         {us_ratio:.1f}%
                     </div>
                 </div>
@@ -1031,7 +1031,7 @@ if selected_tab == "성과":
                     <div style="font-size: 18px; font-weight: 700; color: #0f2f76; text-align: right">{int(kr_value):,}</div>
                     <div style="background: #b2c2ff; color: white;
                                 padding: 6px 14px; border-radius: 8px;
-                                font-size: 13px; font-weight: 700; width: 70px; text-align: center;">
+                                font-size: 13px; font-weight: 700; width: 70px; text-align: right;">
                         {kr_ratio:.1f}%
                     </div>
                 </div>
