@@ -1107,7 +1107,8 @@ if selected_tab == "성과":
         </div>
     </div>
     """)
-
+    
+    # --- 월간 성과 데이터 불러오기 ---
     try:
         performance_df = conn.read(worksheet="성과")
         performance_df.columns = performance_df.columns.str.strip()
@@ -1315,16 +1316,20 @@ if selected_tab == "성과":
     with col_right:
         st.markdown(strategy_html, unsafe_allow_html=True)
 
-        # 월간 성과 카드 (전체 너비)
-    if month_cards_html:
-        st.markdown(month_cards_html, unsafe_allow_html=True)
+    # 상단 카드들을 card 클래스로 감싸기
+    monthly_cards_final = f"""
+    <div class="card">
+        {month_cards_html}
+        {strategy_summary_html}
+    </div>
+    """
     
-    if strategy_summary_html:
-        st.markdown(strategy_summary_html, unsafe_allow_html=True)
+    # 월간 성과 표시
+    if month_cards_html:
+        st.markdown(monthly_cards_final, unsafe_allow_html=True)
     
     if monthly_table_html:
         st.markdown(monthly_table_html, unsafe_allow_html=True)
-
 else:
     # 기존 레이아웃 (그대로 유지)
     with st.container():
