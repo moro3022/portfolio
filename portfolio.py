@@ -8,62 +8,67 @@ from streamlit_gsheets import GSheetsConnection
 from textwrap import dedent
 
 # --- 기본 설정 ---
-ACCOUNT_NAMES =  ["ISA", "Pension", "IRP", "ETF", "US", "사주", "LV"]
+ACCOUNT_NAMES = ["ISA", "Pension", "IRP", "ETF", "US", "사주", "LV"]
 
-# --- 구글 시트 연결 ---
+# --- 엑셀 파일 경로 설정 ---
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 # --- 데이터 불러오기 ---
-cash_df = conn.read(worksheet="입출금")
-cash_df.columns = cash_df.columns.str.strip()
-cash_df["거래일"] = pd.to_datetime(cash_df["거래일"])
+try:
+    # 입출금 시트
+    cash_df = conn.read(worksheet="입출금")
+    cash_df.columns = cash_df.columns.str.strip()
+    cash_df["거래일"] = pd.to_datetime(cash_df["거래일"])
 
-# ✅ WRAP 시트에서 환율(O1 셀) 읽기
-exchange_rate_df = conn.read(worksheet="WRAP", usecols=[14], nrows=1, header=None)
-exchange_rate = float(exchange_rate_df.iloc[0, 0]) if not exchange_rate_df.empty else 1400
+    # WRAP 시트에서 환율(O열, 첫 번째 행) 읽기
+    exchange_rate_df = conn.read(worksheet="WRAP", usecols=[14], nrows=1, header=None)
+    exchange_rate = float(exchange_rate_df.iloc[0, 0]) if not exchange_rate_df.empty else 1400
 
-# 각 계좌 시트 불러오기
-TRADE_SHEET_NAMES = [name for name in ACCOUNT_NAMES if name not in ["LV"]]
+    # 각 계좌 시트 불러오기
+    TRADE_SHEET_NAMES = [name for name in ACCOUNT_NAMES if name not in ["LV"]]
 
-trade_dfs = {
-    acct: conn.read(worksheet=acct)
-    for acct in TRADE_SHEET_NAMES
-}
-for acct, df in trade_dfs.items():
-    df.columns = df.columns.str.strip()
+    trade_dfs = {
+        acct: conn.read(worksheet=acct)
+        for acct in TRADE_SHEET_NAMES
+    }
+    for acct, df in trade_dfs.items():
+        df.columns = df.columns.str.strip()
 
-    # ✅ ISA, Pension만 종목코드 특별 처리
-    if acct in ["ISA", "Pension", "사주"]:
-        df['종목코드'] = df['종목코드'].astype(str).str.split('.').str[0].str.zfill(6)
+        # ISA, Pension, 사주만 종목코드 특별 처리
+        if acct in ["ISA", "Pension", "사주"]:
+            df['종목코드'] = df['종목코드'].astype(str).str.split('.').str[0].str.zfill(6)
 
-    df["거래일"] = pd.to_datetime(df["거래일"])
-    df["제세금"] = pd.to_numeric(df["제세금"], errors="coerce").fillna(0)
-    df["단가"] = pd.to_numeric(df["단가"], errors="coerce").fillna(0)
-    df["수량"] = pd.to_numeric(df["수량"], errors="coerce").fillna(0)
-    df["거래금액"] = pd.to_numeric(df["거래금액"], errors="coerce").fillna(0)
+        df["거래일"] = pd.to_datetime(df["거래일"])
+        df["제세금"] = pd.to_numeric(df["제세금"], errors="coerce").fillna(0)
+        df["단가"] = pd.to_numeric(df["단가"], errors="coerce").fillna(0)
+        df["수량"] = pd.to_numeric(df["수량"], errors="coerce").fillna(0)
+        df["거래금액"] = pd.to_numeric(df["거래금액"], errors="coerce").fillna(0)
 
+        # 유형 열이 있는 경우에만 처리
+        if "유형" in df.columns:
+            df["유형"] = df["유형"].fillna("미분류")
+        else:
+            df["유형"] = "미분류"
 
-    # ✅ 유형 열이 있는 경우에만 처리
-    if "유형" in df.columns:
-        df["유형"] = df["유형"].fillna("미분류")
-    else:
-        df["유형"] = "미분류"  # 유형 열이 없으면 전체를 미분류로
+    # 배당 시트 불러오기
+    df_dividend = conn.read(worksheet="배당")
+    df_dividend.columns = df_dividend.columns.str.strip()
+    df_dividend["배당금"] = pd.to_numeric(df_dividend["배당금"], errors="coerce").fillna(0).astype(int)
 
-# 배당 시트 불러오기
-df_dividend = conn.read(worksheet="배당")
-df_dividend.columns = df_dividend.columns.str.strip()
-df_dividend["배당금"] = pd.to_numeric(df_dividend["배당금"], errors="coerce").fillna(0).astype(int)
+    # WRAP 시트에서 K1(원금), M1(평가액) 셀 읽기
+    wrap_capital_df = conn.read(worksheet="WRAP", usecols=[10], nrows=1, header=None)
+    wrap_capital_usd = float(wrap_capital_df.iloc[0, 0]) if not wrap_capital_df.empty else 0
 
-# ✅ WRAP 시트에서 K1(원금), M1(평가액), O1(환율) 셀 읽기
-wrap_capital_df = conn.read(worksheet="WRAP", usecols=[10], nrows=1, header=None)
-wrap_capital_usd = float(wrap_capital_df.iloc[0, 0]) if not wrap_capital_df.empty else 0
+    wrap_value_df = conn.read(worksheet="WRAP", usecols=[12], nrows=1, header=None)
+    wrap_value_usd = float(wrap_value_df.iloc[0, 0]) if not wrap_value_df.empty else 0
 
-wrap_value_df = conn.read(worksheet="WRAP", usecols=[12], nrows=1, header=None)
-wrap_value_usd = float(wrap_value_df.iloc[0, 0]) if not wrap_value_df.empty else 0
+    # 원화 환산
+    wrap_capital = wrap_capital_usd * exchange_rate
+    wrap_value = wrap_value_usd * exchange_rate
 
-# 원화 환산
-wrap_capital = wrap_capital_usd * exchange_rate
-wrap_value = wrap_value_usd * exchange_rate
+except Exception as e:
+    st.error(f"엑셀 파일을 읽는 중 오류 발생: {e}")
+    st.stop()
 
 # --- 계산 함수 정의 ---
 @st.cache_data(ttl=300)
@@ -148,7 +153,6 @@ def calculate_account_summary(df_trade, df_cash, df_dividend, is_us_stock=False)
     if not df_trade.empty and "계좌명" in df_trade.columns:
         account_names = df_trade["계좌명"].unique()
         dividend_sum = df_dividend[df_dividend["계좌명"].isin(account_names)]["배당금"].sum()
-        # NaN 체크 추가
         dividend_total = dividend_sum if pd.notna(dividend_sum) else 0
 
     # 빈 DataFrame 처리
@@ -175,7 +179,7 @@ def calculate_account_summary(df_trade, df_cash, df_dividend, is_us_stock=False)
         "capital": round(capital) if pd.notna(capital) else 0,
         "current_value": round(current_value) if pd.notna(current_value) else 0,
         "current_profit": round(current_profit) if pd.notna(current_profit) else 0,
-        "actual_profit": round(actual_profit) if pd.notna(actual_profit) else 0,  # 수정된 부분
+        "actual_profit": round(actual_profit) if pd.notna(actual_profit) else 0,
         "total_balance": round(total_balance) if pd.notna(total_balance) else 0,
         "cash": round(cash) if pd.notna(cash) else 0,
         "total_profit": round(current_profit + actual_profit + dividend_total) if pd.notna(current_profit + actual_profit + dividend_total) else 0,
@@ -184,11 +188,11 @@ def calculate_account_summary(df_trade, df_cash, df_dividend, is_us_stock=False)
     }
 
     return df_summary, summary
+
 # --- Streamlit 구성시작 ---
 st.set_page_config(layout="wide")
 
 # --- 스타일 정의 ---
-
 st.markdown("""
 <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
 
@@ -270,15 +274,70 @@ html, body, .stApp, * {
     border: none;             
     margin: 20px 0;
 }
-.mix-item { 
-    background: #EDEDE9;
-    border-radius: 12px;
-    padding: 16px 20px;
-    margin-top: 12px;
-    margin-bottom: 16px;
+            
+/* 성과 탭 전용 CSS */
+.total-value-card {
+    background: #778AD5;
+    color: white;
+    border-radius: 16px;
+    padding: 28px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.08);
+    margin-bottom: 20px;
+}
+.total-value-title { font-size: 20px; font-weight: 500; opacity: 0.95; margin-bottom: 12px; }
+.total-value-amount { font-size: 36px; font-weight: 700; margin-bottom: 24px; }
+.value-divider { height: 1px; background-color: rgba(255, 255, 255, 0.3); margin: 24px 0; }
+.profit-section { 
+    display: flex; 
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+}
+.profit-label { font-size: 20px; font-weight: 500; opacity: 0.9; }
+.profit-row {
     display: flex;
-    justify-content: space-between;
-}                  
+    align-items: center;
+    gap: 16px;
+}
+.profit-amount { font-size: 32px; font-weight: 700; }
+.profit-badge { 
+    background-color: rgba(255, 255, 255, 0.25); 
+    color: white; 
+    font-size: 18px; 
+    font-weight: 700; 
+    padding: 6px 16px; 
+    border-radius: 20px; 
+}
+
+.gauge-container { position: relative; width: 200px; height: 120px; }
+.gauge { width: 240px; height: 120px; border-radius: 240px 240px 0 0; position: relative; }
+.gauge::after { content: ''; position: absolute; width: 170px; height: 85px; background-color: white; border-radius: 170px 170px 0 0; bottom: 0; left: 35px; }
+.gauge-value { position: absolute; bottom: 15px; left: 62%; transform: translateX(-50%); font-size: 28px; font-weight: 700; color: #0F2F76; z-index: 10; }
+.gauge-label { position: absolute; bottom: 5px; left: 62%; transform: translateX(-50%); font-size: 14px; font-weight: 600; color: #0F2F76; z-index: 10; }
+
+.allocation-section { display: flex; flex-direction: column; align-items: center; gap: 20px; margin-bottom: 32px; margin-top: 24px; }
+.allocation-donut { position: relative; width: 180px; height: 180px; border-radius: 50%; }
+.allocation-donut::after { content: ''; position: absolute; width: 120px; height: 120px; background-color: white; border-radius: 50%; top: 30px; left: 30px; }
+.allocation-donut-value { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 24px; font-weight: 700; color: #0f2f76; z-index: 10; }
+.allocation-donut-label { position: absolute; top: 60%; left: 50%; transform: translate(-50%, 0); font-size: 14px; font-weight: 500; color: #0f2f76; z-index: 10; }
+            
+.section-divider { height: 1px; background-color: #E8EEF5; margin: 24px 0; }
+
+.country-allocation { display: flex; justify-content: space-around; align-items: center; padding-top: 12px; margin-top: 24px; margin-bottom: 24px;}
+.country-item { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.country-name { font-size: 16px; font-weight: 600; color: #2C3E50; }
+.country-amount { font-size: 16px; font-weight: 700; color: #666; }
+
+.strategy-donut-container { display: flex; justify-content: center; padding: 20px 0; }
+.strategy-donut { position: relative; width: 240px; height: 240px; border-radius: 50%; }
+.strategy-donut::after { content: ''; position: absolute; width: 160px; height: 160px; background-color: white; border-radius: 50%; top: 40px; left: 40px; }
+.strategy-list { display: flex; flex-direction: column; gap: 12px; }
+.strategy-item { border: 3px solid; border-radius: 16px; padding: 20px 24px; display: flex; justify-content: space-between; align-items: center; transition: all 0.3s ease; }
+.strategy-item:hover { transform: translateY(-2px); }
+.strategy-name { font-size: 16px; font-weight: 500; color: #0f2f76; }
+.strategy-values { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.strategy-amount { font-size: 28px; font-weight: 700; }
+.strategy-profit { font-size: 16px; font-weight: 600; opacity: 0.8; }            
 
 </style>
 """, unsafe_allow_html=True)
@@ -289,7 +348,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- 커스텀 탭 디자인  ---
-ACCOUNT_NAMES = ["전체", "ISA", "Pension", "IRP", "ETF", "US", "MIX"]
+ACCOUNT_NAMES = ["성과", "전체", "ISA", "Pension", "IRP", "ETF", "US"]
 green_color = "#3A866A"
 red_color = "#C54E4A"
 
@@ -297,7 +356,7 @@ red_color = "#C54E4A"
 selected_tab = option_menu(
     menu_title=None,
     options=ACCOUNT_NAMES,
-    icons=["back", "geo-alt-fill","geo-alt-fill","geo-alt-fill","geo-alt-fill","geo-alt-fill","grid-1x2-fill"],
+    icons=["back", "back", "geo-alt-fill","geo-alt-fill","geo-alt-fill","geo-alt-fill","geo-alt-fill"],
     orientation="horizontal",
     styles={
         "container": {"padding": "0!important", "background-color": "#E0E0E0"},
@@ -317,13 +376,13 @@ selected_tab = option_menu(
 )
 
 ACCOUNT_COLORS = {
+    "Overview": "#EDE5D9",
     "ISA": "#B9CCD9",      # 블루그레이
     "Pension": "#F6CD7D",  # 머스타드
     "IRP": "#C8D9A2",      # 올리브
     "ETF": "#F6C793",      # 살구
-    "전체": "#EDE5D9",      # 기본 회색 (또는 투명)
+    "전체": "#EDE5D9",      # 기본 회색
     "US": "#F7B7A3",
-    "ESOP": "#D6B8F9",
 }
 
 theme_color = ACCOUNT_COLORS.get(selected_tab, "#EDEDE9")
@@ -362,142 +421,14 @@ local_total_summary["total_profit_rate"] = (
 local_summary = {k: round(v) if k != "total_profit_rate" else round(v, 2) for k, v in local_total_summary.items()}
 local_total_summary["total_profit"] = local_total_summary["current_profit"] + local_total_summary["actual_profit"]
 
-# 탭 선택에 따른 데이터 분기 설정-
+# 탭 선택에 따른 데이터 분기 설정
 if acct == "전체":
     df_summary = pd.concat(df_summary_list, ignore_index=True)
     summary = local_summary
-    
-    # 유형별 집계 (로컬 계좌만)
-    df_local = df_summary[["유형", "매입금액", "평가금액"]].copy()
 
-    # US 계좌 요약 계산
-    df_trade_us = trade_dfs["US"]
-    df_cash_us = cash_df[cash_df["계좌명"] == "US"]
-    df_us_summary, _ = calculate_account_summary(df_trade_us, df_cash_us, df_dividend)
-
-    # 환율 시트의 최신 기준환율 (제일 마지막 행)
-    if not df_us_summary.empty:
-        df_us_krw = df_us_summary[["유형", "매입금액", "평가금액"]].copy()
-        df_us_krw[["매입금액","평가금액"]] = (
-            df_us_krw[["매입금액","평가금액"]]
-            .apply(pd.to_numeric, errors="coerce").fillna(0)
-            * exchange_rate
-        ).round().astype(int)
-        df_all = pd.concat([df_local, df_us_krw], ignore_index=True)
-    else:
-        df_all = df_local
-
-    # ✅ LV 데이터 추가
-    lv_cash = cash_df[cash_df["계좌명"] == "LV"]
-    lv_balance = lv_cash[lv_cash["구분"] == "입금"]["금액"].sum() - lv_cash[lv_cash["구분"] == "출금"]["금액"].sum()
-    
-    lv_df = conn.read(worksheet="LV")
-    lv_df.columns = lv_df.columns.str.strip()
-    lv_profit = pd.to_numeric(lv_df["손익"], errors="coerce").sum()
-    lv_value = lv_balance + lv_profit
-    
-    df_lv = pd.DataFrame({
-        "유형": ["코스피"],
-        "매입금액": [lv_balance],
-        "평가금액": [lv_value]
-    })
-
-    # ✅ ESOP 데이터 추가
-    df_trade_esop = trade_dfs["사주"]
-    df_cash_esop = cash_df[cash_df["계좌명"] == "사주"]
-    _, summary_esop = calculate_account_summary(df_trade_esop, df_cash_esop, df_dividend)
-    
-    # 매입금액 직접 계산 (매도 없으므로 단가 * 수량)
-    esop_capital = (df_trade_esop["단가"] * df_trade_esop["수량"]).sum()
-    
-    df_esop = pd.DataFrame({
-        "유형": ["금융"],
-        "매입금액": [esop_capital],
-        "평가금액": [summary_esop["current_value"]]
-    })
-
-    # ✅ WRAP 데이터 추가
-    df_wrap = pd.DataFrame({
-        "유형": ["WRAP"],
-        "매입금액": [wrap_capital],
-        "평가금액": [wrap_value]
-    })
-
-    # ✅ 전체 데이터 합치기
-    df_all = pd.concat([df_all, df_lv, df_esop, df_wrap], ignore_index=True)
-
-    # 유형별 집계
-    weighting_summary = (
-        df_all.groupby("유형", as_index=False)
-             .agg({"매입금액":"sum","평가금액":"sum"})
-             .sort_values("평가금액", ascending=False)
-    )
-
-elif acct == "MIX":
-    local_accounts = ["ISA", "ETF"]
-    local_value, local_cash = 0, 0
-    for a in local_accounts:
-        df_trade = trade_dfs[a]
-        df_cash = cash_df[cash_df["계좌명"] == a]
-        _, s = calculate_account_summary(df_trade, df_cash, df_dividend)
-        local_value += s["current_value"]
-        local_cash += s["cash"]
-
-    # Pension: Pension + IRP
-    pension_accounts = ["Pension", "IRP"]
-    pension_value, pension_cash = 0, 0
-    for a in pension_accounts:
-        df_trade = trade_dfs[a]
-        df_cash = cash_df[cash_df["계좌명"] == a]
-        _, s = calculate_account_summary(df_trade, df_cash, df_dividend)
-        pension_value += s["current_value"]
-        pension_cash += s["cash"]
-
-    # Deposit: Local + Pension의 현금 합
-    deposit = local_cash + pension_cash
-
-    # US
-    df_trade_us = trade_dfs["US"]
-    df_cash_us = cash_df[cash_df["계좌명"] == "US"]
-    _, summary_us = calculate_account_summary(df_trade_us, df_cash_us, df_dividend)
-    us_value = summary_us["current_value"] + summary_us["cash"]
-    us_profit = summary_us["total_profit"]
-
-    # ✅ WRAP (원화 환산)
-    wrap_value_krw = wrap_value
-
-    # ESOP
-    df_trade_esop = trade_dfs["사주"]
-    df_cash_esop = cash_df[cash_df["계좌명"] == "사주"]
-    _, summary_esop = calculate_account_summary(df_trade_esop, df_cash_esop, df_dividend)
-    esop_value = summary_esop["current_value"]
-    esop_profit = summary_esop["total_profit"]
-
-    # LV
-    lv_cash = cash_df[cash_df["계좌명"] == "LV"]
-    lv_balance = lv_cash[lv_cash["구분"] == "입금"]["금액"].sum() - lv_cash[lv_cash["구분"] == "출금"]["금액"].sum()
-
-    lv_df = conn.read(worksheet="LV")
-    lv_df.columns = lv_df.columns.str.strip()
-    lv_profit = pd.to_numeric(lv_df["손익"], errors="coerce").sum()
-
-    lv_value = lv_balance + lv_profit
-
-    # Savings
-    parking_df = cash_df[cash_df["계좌명"] == "파킹"]
-    savings = parking_df[parking_df["구분"] == "입금"]["금액"].sum() - parking_df[parking_df["구분"] == "출금"]["금액"].sum()
-    housing_df = cash_df[cash_df["계좌명"] == "청약"]
-    housing = housing_df[housing_df["구분"] == "입금"]["금액"].sum() - housing_df[housing_df["구분"] == "출금"]["금액"].sum()
-
-elif acct == "OTH":
-    # OTH 처리 로직 (US, 사주 데이터 계산)
-    df_trade_us = trade_dfs["US"]
-    df_cash_us = cash_df[cash_df["계좌명"] == "US"]
-    df_us, summary_us = calculate_account_summary(df_trade_us, df_cash_us, df_dividend)
-
-    df_trade_esop = trade_dfs["사주"]
-    df_cash_esop = cash_df[cash_df["계좌명"] == "사주"]
-    df_esop, summary_esop = calculate_account_summary(df_trade_esop, df_cash_esop, df_dividend) 
+elif acct == "성과":
+    df_summary = pd.DataFrame()
+    summary = local_summary
 
 else:
     df_trade = trade_dfs[acct]
@@ -505,337 +436,255 @@ else:
     df_summary, summary = calculate_account_summary(df_trade, df_cash, df_dividend)
 
 
-if acct not in ["MIX", "OTH"]: # MIX, OTH가 아닐 때만 summary 값 사용
-    total_profit = summary["current_profit"] + summary["actual_profit"]
-    total_profit_rate = summary["total_profit_rate"]
-    today_profit = summary["today_profit"] 
+# summary 값 사용
+total_profit = summary["current_profit"] + summary["actual_profit"]
+total_profit_rate = summary["total_profit_rate"]
+today_profit = summary["today_profit"] 
 
-    current_profit = summary["current_profit"]
-    
-    # ✅ 빈 DataFrame 체크 추가
-    if df_summary.empty:
-        buy_cost_total = 0
-        current_profit_rate = 0
-    else:
-        buy_cost_total = df_summary["매입금액"].sum()
-        current_profit_rate = current_profit / buy_cost_total * 100 if buy_cost_total > 0 else 0
+current_profit = summary["current_profit"]
 
-    actual_profit = summary["actual_profit"]
-    actual_profit_rate = actual_profit / summary["capital"] * 100 if summary["capital"] else 0
+# 빈 DataFrame 체크 추가
+if df_summary.empty:
+    buy_cost_total = 0
+    current_profit_rate = 0
+else:
+    buy_cost_total = df_summary["매입금액"].sum()
+    current_profit_rate = current_profit / buy_cost_total * 100 if buy_cost_total > 0 else 0
 
-    current_value = summary["current_value"]
-    cash = summary["cash"]
-    capital = summary["capital"]
-    operated_ratio = current_value / summary["total_balance"] * 100 if summary["total_balance"] != 0 else 0
-    cash_ratio = cash / summary["total_balance"] * 100 if summary["total_balance"] != 0 else 0
-    capital_ratio = capital / summary["total_balance"] * 100 if summary["total_balance"] != 0 else 0
+actual_profit = summary["actual_profit"]
+actual_profit_rate = actual_profit / summary["capital"] * 100 if summary["capital"] else 0
 
-if acct == "MIX":
-    total_stock = local_value + pension_value + us_value + esop_value
-    total_cash = savings + deposit + housing
-    total_asset = total_stock + total_cash
+current_value = summary["current_value"]
+cash = summary["cash"]
+capital = summary["capital"]
+operated_ratio = current_value / summary["total_balance"] * 100 if summary["total_balance"] != 0 else 0
+cash_ratio = cash / summary["total_balance"] * 100 if summary["total_balance"] != 0 else 0
+capital_ratio = capital / summary["total_balance"] * 100 if summary["total_balance"] != 0 else 0
 
 # --- 레이아웃 시작 ---
     
 # 1. Profit 카드
-
 icon_book = "https://cdn-icons-png.flaticon.com/128/16542/16542648.png"
 icon_wallet = "https://cdn-icons-png.flaticon.com/128/19011/19011999.png"
 
-# 1. 통화 표시 변수 추가 (탭 선택 후 추가)
-
-if selected_tab not in ["MIX", "OTH"]:
-    card_html_profit = f"""
-    <div class="card">
-        <div class="card-title"><span style= "color: {theme_color}";>●</span><span style="margin-left: 6px;">Total Profit</span></div>
-        <div class="card-value">{currency_symbol}{total_profit:,.0f}</div>
-        <div class="badge">+{total_profit_rate:.2f}%</div>
-        <div style="display:flex; justify-content:space-between; margin-top: 15px; ">
-            <div class="card-item" style="width: 47%; background: {theme_color};">
-                <div style="display: flex; align-items: center; gap: 6px;">
-                    <img src="{icon_book}" width="20" height="20" />          
-                    <span class="item-label" >Current</span>
-                </div>
-                <div class="item-return" >{currency_symbol}{current_profit:,.0f}</div>
-                <div class="badge">+{current_profit_rate:.2f}%</div>
+card_html_profit = f"""
+<div class="card">
+    <div class="card-title"><span style= "color: {theme_color}";>●</span><span style="margin-left: 6px;">Total Profit</span></div>
+    <div class="card-value">{currency_symbol}{total_profit:,.0f}</div>
+    <div class="badge">+{total_profit_rate:.2f}%</div>
+    <div style="display:flex; justify-content:space-between; margin-top: 15px; ">
+        <div class="card-item" style="width: 47%; background: {theme_color};">
+            <div style="display: flex; align-items: center; gap: 6px;">
+                <img src="{icon_book}" width="20" height="20" />          
+                <span class="item-label" >Current</span>
             </div>
-            <div class="card-item" style="width: 47%;">
-                <div style="display: flex; align-items: center; gap: 6px;">
-                    <img src="{icon_wallet}" width="20" height="20" />
-                    <span class="item-label">Actual</span>
-                </div>
-                <div class="item-return">{currency_symbol}{actual_profit:,.0f}</div>
-                <div class="badge">+{actual_profit_rate:.2f}%</div>
+            <div class="item-return" >{currency_symbol}{current_profit:,.0f}</div>
+            <div class="badge">+{current_profit_rate:.2f}%</div>
+        </div>
+        <div class="card-item" style="width: 47%;">
+            <div style="display: flex; align-items: center; gap: 6px;">
+                <img src="{icon_wallet}" width="20" height="20" />
+                <span class="item-label">Actual</span>
             </div>
+            <div class="item-return">{currency_symbol}{actual_profit:,.0f}</div>
+            <div class="badge">+{actual_profit_rate:.2f}%</div>
         </div>
     </div>
-    """
+</div>
+"""
 
-    # 2. --- balance 카드 ---
-    def get_bar(percent, color="#2E7850"):
-        return f"<div style='width:100%; background:#F5F5F5; height:20px; border-radius:5px; margin-top:8px; margin-bottom:12px;'><div style='width:{percent:.1f}%; background:{color}; height:20px; border-radius:5px;'></div></div>"
+# 2. --- balance 카드 ---
+def get_bar(percent, color="#2E7850"):
+    return f"<div style='width:100%; background:#F5F5F5; height:20px; border-radius:5px; margin-top:8px; margin-bottom:12px;'><div style='width:{percent:.1f}%; background:{color}; height:20px; border-radius:5px;'></div></div>"
 
-    current_year = datetime.now().year
+current_year = datetime.now().year
 
-    LIMITS = {
-        "ISA": 60000000,
-        "Pension": 3000000,
-        "IRP": 7200000
-    }
+LIMITS = {
+    "ISA": 60000000,
+    "Pension": 3000000,
+    "IRP": 7200000
+}
 
-    # 납입액 계산
-    if acct == "ISA":
-        # 전체 기간 누적 입금액
-        deposit_df = cash_df[
-            (cash_df["계좌명"] == acct) &
-            (cash_df["구분"] == "입금")
-        ]
-    else:
-        # 올해 입금액
-        deposit_df = cash_df[
-            (cash_df["계좌명"] == acct) &
-            (cash_df["구분"] == "입금") &
-            (cash_df["거래일"].dt.year == current_year)
-        ]
-        
-    limit = LIMITS.get(acct, 0)
-    paid_amount = deposit_df["금액"].sum()
-    remaining_amount = max(limit - paid_amount, 0)
-    paid_ratio = (paid_amount / limit) * 100 if limit > 0 else 0
+# 납입액 계산
+if acct == "ISA":
+    # 전체 기간 누적 입금액
+    deposit_df = cash_df[
+        (cash_df["계좌명"] == acct) &
+        (cash_df["구분"] == "입금")
+    ]
+else:
+    # 올해 입금액
+    deposit_df = cash_df[
+        (cash_df["계좌명"] == acct) &
+        (cash_df["구분"] == "입금") &
+        (cash_df["거래일"].dt.year == current_year)
+    ]
+    
+limit = LIMITS.get(acct, 0)
+paid_amount = deposit_df["금액"].sum()
+remaining_amount = max(limit - paid_amount, 0)
+paid_ratio = (paid_amount / limit) * 100 if limit > 0 else 0
 
-    bar1 = get_bar(operated_ratio, color=theme_color)
+bar1 = get_bar(operated_ratio, color=theme_color)
 
-    # ✅ 조건부 추가 HTML
-    if acct in ["ISA", "Pension", "IRP"] and limit > 0:
-        bar2_html = get_bar(paid_ratio, color=theme_color)
-        limit_html = f"""
-            <div class="custom-divider"></div>
-            <div style="display:flex; justify-content:space-between; align-items:center; font-weight:555; font-size:18px; color:#555; margin-top:8px;">
-                <div style="margin-left:5px;">Limit</div>
-                <div style="margin-right:5px;">{limit:,.0f}</div>
-            </div>
-            {bar2_html}
-            <div style="display:flex; justify-content:space-between; font-size:14px; margin-top:-8px; margin-bottom:8px;">
-                <div style="color:#555; font-weight:600; margin-left:5px;">{paid_amount:,.0f}</div>
-                <div style="color:#555; margin-right:5px;">{remaining_amount:,.0f}</div>
-            </div>
-        """.strip()
-    else:
-        limit_html = "<div style='height:0;'></div>"
-
-    icon_capital = "https://cdn-icons-png.flaticon.com/128/7928/7928113.png"
-    icon_cash = "https://cdn-icons-png.flaticon.com/128/13794/13794238.png"
-
-    # ✅ 항상 완성된 HTML 구조 유지
-    card_html_balance = f"""
-    <div class="card">
-        <div class="card-title"><span style="color:{theme_color};">●</span><span style="margin-left:6px;">Balance</span></div>
-        <div class="card-value">{currency_symbol}{summary['total_balance']:,.0f}</div>
-            <div style="display:flex; justify-content:space-between;">
-                <div class="card-item" style="width:47%;">
-                    <div style="display:flex; align-items:center; gap:6px;">
-                    <img src="{icon_capital}" width="20" height="20" />
-                    <span class="item-label">Invested</span>
-                    </div>
-                    <div class="item-return">{currency_symbol}{capital:,.0f}</div>
-                </div>
-                <div class="card-item" style="width:47%;">
-                    <div style="display:flex; align-items:center; gap:6px;">
-                    <img src="{icon_cash}" width="20" height="20" />
-                    <span class="item-label">Profit</span>
-                    </div>
-                    <div class="item-return">{currency_symbol}{total_profit:,.0f}</div>
-                </div>
-            </div>
-            <div style="display:flex; justify-content:space-between; align-items:center; font-weight:555; font-size:18px; color:#555; margin-top:8px;">
-                <div style="margin-left:5px;">Operated</div>
-                <div style="margin-right:5px;">{currency_symbol}{current_value:,.0f}</div>
-            </div>
-            <div style="display:flex; justify-content:space-between; align-items:center; font-weight:555; font-size:18px; color:#555;">
-                <div style="margin-left:5px;">Cash</div>
-                <div style="margin-right:5px;">{currency_symbol}{cash:,.0f}</div>
-            </div>
-            {bar1}
-            <div style="display:flex; justify-content:space-between; font-size:14px; margin-top:-8px; margin-bottom:8px;">
-                <div style="color:#555; font-weight:600; margin-left:5px;">{operated_ratio:.0f}%</div>
-                <div style="color:#555; margin-right:5px;">{cash_ratio:.0f}%</div>
-            </div>
-            {limit_html}
-    </div>
+# 조건부 추가 HTML
+if acct in ["ISA", "Pension", "IRP"] and limit > 0:
+    bar2_html = get_bar(paid_ratio, color=theme_color)
+    limit_html = f"""
+        <div class="custom-divider"></div>
+        <div style="display:flex; justify-content:space-between; align-items:center; font-weight:555; font-size:18px; color:#555; margin-top:8px;">
+            <div style="margin-left:5px;">Limit</div>
+            <div style="margin-right:5px;">{limit:,.0f}</div>
+        </div>
+        {bar2_html}
+        <div style="display:flex; justify-content:space-between; font-size:14px; margin-top:-8px; margin-bottom:8px;">
+            <div style="color:#555; font-weight:600; margin-left:5px;">{paid_amount:,.0f}</div>
+            <div style="color:#555; margin-right:5px;">{remaining_amount:,.0f}</div>
+        </div>
     """.strip()
+else:
+    limit_html = "<div style='height:0;'></div>"
+
+icon_capital = "https://cdn-icons-png.flaticon.com/128/7928/7928113.png"
+icon_cash = "https://cdn-icons-png.flaticon.com/128/13794/13794238.png"
+
+# 항상 완성된 HTML 구조 유지
+card_html_balance = f"""
+<div class="card">
+    <div class="card-title"><span style="color:{theme_color};">●</span><span style="margin-left:6px;">Balance</span></div>
+    <div class="card-value">{currency_symbol}{summary['total_balance']:,.0f}</div>
+        <div style="display:flex; justify-content:space-between;">
+            <div class="card-item" style="width:47%;">
+                <div style="display:flex; align-items:center; gap:6px;">
+                <img src="{icon_capital}" width="20" height="20" />
+                <span class="item-label">Invested</span>
+                </div>
+                <div class="item-return">{currency_symbol}{capital:,.0f}</div>
+            </div>
+            <div class="card-item" style="width:47%;">
+                <div style="display:flex; align-items:center; gap:6px;">
+                <img src="{icon_cash}" width="20" height="20" />
+                <span class="item-label">Profit</span>
+                </div>
+                <div class="item-return">{currency_symbol}{total_profit:,.0f}</div>
+            </div>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; font-weight:555; font-size:18px; color:#555; margin-top:8px;">
+            <div style="margin-left:5px;">Operated</div>
+            <div style="margin-right:5px;">{currency_symbol}{current_value:,.0f}</div>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; font-weight:555; font-size:18px; color:#555;">
+            <div style="margin-left:5px;">Cash</div>
+            <div style="margin-right:5px;">{currency_symbol}{cash:,.0f}</div>
+        </div>
+        {bar1}
+        <div style="display:flex; justify-content:space-between; font-size:14px; margin-top:-8px; margin-bottom:8px;">
+            <div style="color:#555; font-weight:600; margin-left:5px;">{operated_ratio:.0f}%</div>
+            <div style="color:#555; margin-right:5px;">{cash_ratio:.0f}%</div>
+        </div>
+        {limit_html}
+</div>
+""".strip()
     
 # 3. --- Holdings 카드 ---
+icon_today = "https://cdn-icons-png.flaticon.com/128/876/876754.png"
+icon_total = "https://cdn-icons-png.flaticon.com/128/13110/13110858.png"
 
-# 총 평가금액 + 평가수익률 카드 시작
-        
-    icon_today = "https://cdn-icons-png.flaticon.com/128/876/876754.png"
-    icon_total = "https://cdn-icons-png.flaticon.com/128/13110/13110858.png"
+today_profit_plus = f"{today_profit:,.0f}" if today_profit > 0 else "&nbsp;"
 
-    today_profit_plus = f"{today_profit:,.0f}" if today_profit > 0 else "&nbsp;"
-
-    # 상단 수익 요약 카드
-    card_html_stock = dedent(f"""
-    <div class="card">
-        <div class="card-title"><span style= "color: {theme_color}";>●</span><span style="margin-left: 6px;">Holdings</span></div>
-        <div class="card-value" style="display: flex; justify-content: space-between; align-items: center;">
-            <div>{currency_symbol}{current_value:,.0f}</div>
+# 상단 수익 요약 카드
+card_html_stock = dedent(f"""
+<div class="card">
+    <div class="card-title"><span style= "color: {theme_color}";>●</span><span style="margin-left: 6px;">Holdings</span></div>
+    <div class="card-value" style="display: flex; justify-content: space-between; align-items: center;">
+        <div>{currency_symbol}{current_value:,.0f}</div>
+    </div>
+    <div class="card-item" style="padding: 5px 15px; background: #EDEDE9;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px; margin-bottom: 10px;">
+        <div style="line-height: 24px;">
+            <img src="{icon_today}" width="20" height="20" style="vertical-align: -3px; margin-left: 5px;"/>
+            <span style="margin-left:5px; font-size: 20px; color: #2E7850; font-weight:600;">{currency_symbol}{today_profit_plus}</span>
         </div>
-        <div class="card-item" style="padding: 5px 15px; background: #EDEDE9;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px; margin-bottom: 10px;">
-            <div style="line-height: 24px;">
-                <img src="{icon_today}" width="20" height="20" style="vertical-align: -3px; margin-left: 5px;"/>
-                <span style="margin-left:5px; font-size: 20px; color: #2E7850; font-weight:600;">{currency_symbol}{today_profit_plus}</span>
-            </div>
-            <div style="text-align: right; line-height: 24px;">
-                    <div style="display: flex; align-items: flex-start;">
-                        <img src="{icon_total}" width="20" height="20" style="margin-right:15px;"/>
-                        <div style="display: flex; flex-direction: column; justify-content: center; line-height: 20px; gap:4px; margin-right: 3px;">
-                            <span style="font-size: 20px; font-weight: bold; color:{green_color if current_profit >= 0 else red_color};">
-                                {currency_symbol}{current_profit:,.0f}
-                            </span>
-                        </div>
+        <div style="text-align: right; line-height: 24px;">
+                <div style="display: flex; align-items: flex-start;">
+                    <img src="{icon_total}" width="20" height="20" style="margin-right:15px;"/>
+                    <div style="display: flex; flex-direction: column; justify-content: center; line-height: 20px; gap:4px; margin-right: 3px;">
+                        <span style="font-size: 20px; font-weight: bold; color:{green_color if current_profit >= 0 else red_color};">
+                            {currency_symbol}{current_profit:,.0f}
+                        </span>
                     </div>
-            </div>
-            </div>
+                </div>
         </div>
-    """).strip()
-
-    def icon_up(size=16, color=green_color):
-        return f"""<svg xmlns="http://www.w3.org/2000/svg" width="{size}" height="{size}" fill="none" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16V8"/><path d="m8 12 4-4 4 4"/></svg>"""
-
-    def icon_down(size=16, color=red_color):
-        return f"""<svg xmlns="http://www.w3.org/2000/svg" width="{size}" height="{size}" fill="none" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v8"/><path d="m8 12 4 4 4-4"/></svg>"""
-
-    # 종목별 수익률 바인딩
-    if not df_summary.empty:  # ✅ 빈 DataFrame 체크 추가
-        for _, row in df_summary.sort_values("평가금액", ascending=False).iterrows():
-            name = row["종목명"]
-            profit = row["평가손익"]
-            profit_rate = row["수익률(%)"]
-            stock_value = row["평가금액"]
-            purchase_value = row["매입금액"]
-            qty = row["보유수량"]
-            avg_price = row["평균단가"]
-            current_price = row["현재가"]
-
-            icon_html = icon_up(size=24) if profit >=0 else icon_down(size=24)
-
-            card_html_stock += dedent(f"""
-            <div class="stock-item" style="display: flex; justify-content: space-between; align-items: center; margin-bottom:10px;">
-                <div style="flex: 3.5; display: flex; align-items: center; gap: 10px; min-width: 0;" >
-                    {icon_html}
-                    <div>
-                        <div class="stock-label" style="font-weight:600;">{name}</div>
-                        <div style="font-size: 14px; font-weight: 500; color:#666; margin-top:2px;">
-                            {qty:,.0f}주
-                        </div>
-                    </div>
-                </div>
-                <div style="flex: 1; text-align: right; display: flex; flex-direction: column; justify-content: center; gap:4px;">
-                    <div style="font-size: 14px; font-weight: 500; color:#666; line-height: 22px;">
-                        @ {currency_symbol}{current_price:,.0f}
-                    </div>
-                    <div style="font-size: 14px; font-weight: 500; color:#666; line-height: 22px;">
-                        @ {currency_symbol}{avg_price:,.0f}
-                    </div>
-                </div>
-                <div style="flex: 1.5; text-align: right; display: flex; flex-direction: column; justify-content: center; gap:4px;">
-                    <div style="font-size: 14px; font-weight: 500; color:#666; line-height: 22px;">
-                        {currency_symbol}{stock_value:,.0f}
-                    </div>
-                    <div style="font-size: 14px; font-weight: 500; color:#666; line-height: 22px;">
-                        {currency_symbol}{purchase_value:,.0f}
-                    </div>
-                </div>
-                <div style="flex: 1.7; text-align: right; display: flex; flex-direction: column; justify-content: center; gap:4px;">
-                    <div style="font-size: 18px; font-weight: bold; color:{green_color if profit >= 0 else red_color}; line-height: 22px;">
-                        {currency_symbol}{profit:,.0f}
-                    </div>
-                    <div style="font-size: 16px; font-weight: 500; color:{'#5BA17B' if profit >= 0 else red_color}; line-height: 22px;">
-                        {profit_rate:.1f}%
-                    </div>
-                </div>
-            </div>
-            """)
-    else:  # ✅ 보유종목이 없는 경우 메시지 추가
-        card_html_stock += """
-        <div style="text-align: center; padding: 40px; color: #999; font-size: 18px;">
-            보유중인 종목이 없습니다
         </div>
-        """
+    </div>
+""").strip()
 
-# 전체 탭 : Weighting 카드 HTML
-if selected_tab == "전체":
-    card_html_weighting = f"""
-    <div class="card">
-        <div class="card-title"><span style="color:{theme_color};">●</span><span style="margin-left:6px;">Weighting</span></div>
-    """
+def icon_up(size=16, color=green_color):
+    return f"""<svg xmlns="http://www.w3.org/2000/svg" width="{size}" height="{size}" fill="none" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16V8"/><path d="m8 12 4-4 4 4"/></svg>"""
 
-    _ws = weighting_summary.copy()
-    _ws["매입금액"] = pd.to_numeric(_ws["매입금액"], errors="coerce").fillna(0)
-    _ws["평가금액"] = pd.to_numeric(_ws["평가금액"], errors="coerce").fillna(0)
-    _ws["수익금"] = _ws["평가금액"] - _ws["매입금액"]
-    _ws["수익률"] = _ws.apply(lambda r: (r["수익금"]/r["매입금액"]*100) if r["매입금액"]>0 else 0.0, axis=1)
+def icon_down(size=16, color=red_color):
+    return f"""<svg xmlns="http://www.w3.org/2000/svg" width="{size}" height="{size}" fill="none" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v8"/><path d="m8 12 4 4 4-4"/></svg>"""
 
-    total_purchase = float(_ws["매입금액"].sum())
-    total_value = float(_ws["평가금액"].sum())
+# 종목별 수익률 바인딩
+if not df_summary.empty:
+    for _, row in df_summary.sort_values("평가금액", ascending=False).iterrows():
+        name = row["종목명"]
+        profit = row["평가손익"]
+        profit_rate = row["수익률(%)"]
+        stock_value = row["평가금액"]
+        purchase_value = row["매입금액"]
+        qty = row["보유수량"]
+        avg_price = row["평균단가"]
+        current_price = row["현재가"]
 
-    # ✅ Total 수익 및 수익률 계산 (금융, 코스피 제외)
-    _ws_exclude = _ws[~_ws["유형"].isin(["금융", "코스피"])].copy()
-    total_profit = float(_ws_exclude["수익금"].sum())
-    total_purchase_exclude = float(_ws_exclude["매입금액"].sum())
-    total_rate = (total_profit / total_purchase_exclude * 100) if total_purchase_exclude > 0 else 0.0
+        icon_html = icon_up(size=24) if profit >=0 else icon_down(size=24)
 
-    _ws = _ws.sort_values("평가금액", ascending=False).reset_index(drop=True)
-
-    for _, row in _ws.iterrows():
-        asset_type = str(row["유형"])
-        purchase = int(round(row["매입금액"]))
-        current = int(round(row["평가금액"]))
-        profit = int(round(row["수익금"]))
-        rate = float(row["수익률"])
-        weight_pct = (row["평가금액"] / total_value * 100) if total_value > 0 else 0.0
-        pf_color = green_color if profit >= 0 else red_color
-        pfr_color = '#5BA17B' if profit >= 0 else red_color
-
-        card_html_weighting += dedent(f"""
-        <div class="stock-item" style="display:flex;align-items:center;justify-content:space-between;margin:10px 0;">
-            <div style="flex:1;font-weight:600;font-size:16px;color:#333;">{asset_type}</div>
-            <div style="flex:1;text-align:right;font-size:16px;font-weight:500;color:#555;">{weight_pct:.1f}%</div>
-            <div style="flex:2;text-align:right;line-height:20px;">
-                <div style="font-size:16px;font-weight:700;color:#555;">{current:,.0f}</div>
-                <div style="font-size:15px;font-weight:500; color:#777;">{purchase:,.0f}</div>
+        card_html_stock += dedent(f"""
+        <div class="stock-item" style="display: flex; justify-content: space-between; align-items: center; margin-bottom:10px;">
+            <div style="flex: 3.5; display: flex; align-items: center; gap: 10px; min-width: 0;" >
+                {icon_html}
+                <div>
+                    <div class="stock-label" style="font-weight:600;">{name}</div>
+                    <div style="font-size: 14px; font-weight: 500; color:#666; margin-top:2px;">
+                        {qty:,.0f}주
+                    </div>
+                </div>
             </div>
-            <div style="flex:2;text-align:right;line-height:20px;">
-                <div style="font-size:16px;font-weight:700;color:{pf_color};">{profit:,.0f}</div>
-                <div style="font-size:15px;font-weight:500;color:{pfr_color};">{rate:.1f}%</div>
+            <div style="flex: 1; text-align: right; display: flex; flex-direction: column; justify-content: center; gap:4px;">
+                <div style="font-size: 14px; font-weight: 500; color:#666; line-height: 22px;">
+                    @ {currency_symbol}{current_price:,.0f}
+                </div>
+                <div style="font-size: 14px; font-weight: 500; color:#666; line-height: 22px;">
+                    @ {currency_symbol}{avg_price:,.0f}
+                </div>
+            </div>
+            <div style="flex: 1.5; text-align: right; display: flex; flex-direction: column; justify-content: center; gap:4px;">
+                <div style="font-size: 14px; font-weight: 500; color:#666; line-height: 22px;">
+                    {currency_symbol}{stock_value:,.0f}
+                </div>
+                <div style="font-size: 14px; font-weight: 500; color:#666; line-height: 22px;">
+                    {currency_symbol}{purchase_value:,.0f}
+                </div>
+            </div>
+            <div style="flex: 1.7; text-align: right; display: flex; flex-direction: column; justify-content: center; gap:4px;">
+                <div style="font-size: 18px; font-weight: bold; color:{green_color if profit >= 0 else red_color}; line-height: 22px;">
+                    {currency_symbol}{profit:,.0f}
+                </div>
+                <div style="font-size: 16px; font-weight: 500; color:{'#5BA17B' if profit >= 0 else red_color}; line-height: 22px;">
+                    {profit_rate:.1f}%
+                </div>
             </div>
         </div>
         """)
-
-    total_color = green_color if total_profit >= 0 else red_color
-    ttr_color = '#5BA17B' if total_profit >= 0 else red_color
-    card_html_weighting += dedent(f"""
-    <div class="stock-item" style="display:flex;align-items:center;justify-content:space-between;margin:6px 0;border-bottom:none;">
-        <div style="flex:1;font-weight:800;font-size:18px;color:#333;">Total</div>
-        <div style="flex:1;text-align:right;font-size:15px;font-weight:700;color:#555;">100%</div>
-        <div style="flex:2;text-align:right;line-height:20px;">
-            <div style="font-size:16px;font-weight:700;color:#555;">{total_value:,.0f}</div>
-            <div style="font-size:15px;font-weight:500; color:#666;">{total_purchase:,.0f}</div>
-        </div>
-        <div style="flex:2;text-align:right;line-height:20px;">
-            <div style="font-size:16px;font-weight:700;color:{total_color};">{total_profit:,.0f}</div>
-            <div style="font-size:15px;font-weight:500;color:{ttr_color};">{total_rate:.2f}%</div>
-        </div>
+else:
+    card_html_stock += """
+    <div style="text-align: center; padding: 40px; color: #999; font-size: 18px;">
+        보유중인 종목이 없습니다
     </div>
-    """)
-
-    card_html_weighting += "</div>"
-
+    """
 
 # IRP 탭 : 종목별 막대 그래프 HTML
 if selected_tab == "IRP":
-
     df_summary_sorted = df_summary.sort_values("평가금액", ascending=False).copy()
     
     # TDF 종목들을 합치기
@@ -853,13 +702,13 @@ if selected_tab == "IRP":
         tdf_combined_row = pd.DataFrame({
             "종목코드": ["TDF"],
             "종목명": ["TDF(안전자산)"],
-            "보유수량": [0],  # 수량은 의미없으므로 0
+            "보유수량": [0],
             "평균단가": [0],
             "현재가": [0],
             "평가금액": [tdf_total_value],
             "매입금액": [tdf_rows["매입금액"].sum()],
             "평가손익": [tdf_rows["평가손익"].sum()],
-            "수익률(%)": [0]  # 필요시 계산 가능
+            "수익률(%)": [0]
         })
         
         df_summary_sorted = pd.concat([df_summary_sorted, tdf_combined_row], ignore_index=True)
@@ -904,294 +753,360 @@ if selected_tab == "IRP":
             </div>
     """).strip()
 
-    # 마무리 태그
-    card_html_stock += "</div>"
+# 마무리 태그
+card_html_stock += "</div>"
 
-# 4. OTH 탭 --
 
-from textwrap import dedent
+# 성과 탭 레이아웃 구성 #
+def clean_html(html_string):
+    return ''.join(line.strip() for line in html_string.splitlines())
 
-def make_holdings_card(df_summary, summary, theme_color, title="Holdings", currency="", green_color="#3A866A", red_color="#C54E4A", footer_key=None, footer_label=None):
-    icon_today = "https://cdn-icons-png.flaticon.com/128/876/876754.png"
-    icon_total = "https://cdn-icons-png.flaticon.com/128/13110/13110858.png"
+# ========================================
+# 성과 탭 - 실제 데이터 연결 코드
+# 기존 코드의 "성과 탭 레이아웃 구성" 부분을 아래 코드로 교체
+# ========================================
 
-    today_profit = summary["today_profit"]
-    current_profit = summary["current_profit"]
-    current_value = summary["current_value"]
-    today_profit_plus = f"{currency}{today_profit:,.0f}" if today_profit > 0 else "&nbsp;"
-
-    # 상단 카드
-    card_html_stock = dedent(f"""
-    <div class="card">
-        <div class="card-title"><span style= "color: {theme_color}";>●</span><span style="margin-left: 6px;">{title}</span></div>
-        <div class="card-value" style="display: flex; justify-content: space-between; align-items: center;">
-            <div>{current_value:,.0f}</div>
-        </div>
-        <div class="card-item" style="padding: 5px 15px; background: #EDEDE9;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px; margin-bottom: 10px;">
-            <div style="line-height: 24px;">
-                <img src="{icon_today}" width="20" height="20" style="vertical-align: -3px; margin-left: 5px;"/>
-                <span style="margin-left:5px; font-size: 20px; color: #2E7850; font-weight:600;">{today_profit_plus}</span>
+if selected_tab == "성과":
+    # --- 1. 전략별 데이터 계산 ---
+    
+    # Strategy 1: US Market Index (S&P, 나스닥)
+    us_market_value = 0
+    us_market_profit = 0
+    us_market_buy_cost = 0
+    
+    for acct_name in ["ISA", "Pension", "IRP", "US"]:
+        df_trade = trade_dfs[acct_name]
+        df_cash = cash_df[cash_df["계좌명"] == acct_name]
+        
+        # S&P 또는 나스닥 유형 필터링
+        sp_nasdaq_mask = df_trade["유형"].isin(["S&P", "나스닥"])
+        df_filtered = df_trade[sp_nasdaq_mask]
+        
+        if not df_filtered.empty:
+            df_s, _ = calculate_account_summary(df_filtered, df_cash, df_dividend, is_us_stock=(acct_name == "US"))
+            if not df_s.empty:
+                # US 계좌는 달러 단위이므로 환율 적용
+                if acct_name == "US":
+                    us_market_value += df_s["평가금액"].sum() * exchange_rate
+                    us_market_profit += df_s["평가손익"].sum() * exchange_rate
+                    us_market_buy_cost += df_s["매입금액"].sum() * exchange_rate
+                else:
+                    us_market_value += df_s["평가금액"].sum()
+                    us_market_profit += df_s["평가손익"].sum()
+                    us_market_buy_cost += df_s["매입금액"].sum()
+    
+    us_market_return = (us_market_profit / us_market_buy_cost * 100) if us_market_buy_cost > 0 else 0
+    
+    # Strategy 2: US AI Utility & Grid (전력)
+    us_ai_value = 0
+    us_ai_profit = 0
+    us_ai_buy_cost = 0
+    
+    for acct_name in ["ISA", "Pension", "IRP", "US"]:
+        df_trade = trade_dfs[acct_name]
+        df_cash = cash_df[cash_df["계좌명"] == acct_name]
+        
+        # 전력 유형 필터링
+        power_mask = df_trade["유형"] == "전력"
+        df_filtered = df_trade[power_mask]
+        
+        if not df_filtered.empty:
+            df_s, _ = calculate_account_summary(df_filtered, df_cash, df_dividend, is_us_stock=(acct_name == "US"))
+            if not df_s.empty:
+                # US 계좌는 달러 단위이므로 환율 적용
+                if acct_name == "US":
+                    us_ai_value += df_s["평가금액"].sum() * exchange_rate
+                    us_ai_profit += df_s["평가손익"].sum() * exchange_rate
+                    us_ai_buy_cost += df_s["매입금액"].sum() * exchange_rate
+                else:
+                    us_ai_value += df_s["평가금액"].sum()
+                    us_ai_profit += df_s["평가손익"].sum()
+                    us_ai_buy_cost += df_s["매입금액"].sum()
+    
+    us_ai_return = (us_ai_profit / us_ai_buy_cost * 100) if us_ai_buy_cost > 0 else 0
+    
+    # Strategy 3: US Managed WRAP
+    wrap_value = wrap_value_usd * exchange_rate
+    wrap_profit = (wrap_value_usd - wrap_capital_usd) * exchange_rate
+    wrap_return = ((wrap_value_usd - wrap_capital_usd) / wrap_capital_usd * 100) if wrap_capital_usd > 0 else 0
+    
+    # Strategy 4: KR Index Leverage (LV 탭)
+    try:
+        lv_df = conn.read(worksheet="LV")
+        lv_df.columns = lv_df.columns.str.strip()
+        
+        # C열(손익) 합계
+        lv_profit = pd.to_numeric(lv_df.iloc[1:, 2], errors="coerce").sum()  # C2부터 (index 1부터)
+        lv_capital = 10000000
+        lv_value = lv_profit + lv_capital
+        lv_return = (lv_profit / lv_capital * 100) if lv_capital > 0 else 0
+    except Exception as e:
+        st.warning(f"LV 데이터 로드 실패: {e}")
+        lv_value = 0
+        lv_profit = 0
+        lv_return = 0
+    
+    # Strategy 5: KR Sector ETFs (ETF 탭)
+    df_trade_etf = trade_dfs["ETF"]
+    df_cash_etf = cash_df[cash_df["계좌명"] == "ETF"]
+    df_s_etf, s_etf = calculate_account_summary(df_trade_etf, df_cash_etf, df_dividend)
+    
+    etf_value = s_etf["total_balance"]
+    etf_profit = s_etf["current_profit"] + s_etf["actual_profit"]
+    etf_return = s_etf["total_profit_rate"]
+    
+    # --- 2. 전략 리스트 생성 ---
+    strategies = [
+        {
+            "name": "US Market Index",
+            "value": int(us_market_value),
+            "profit": int(us_market_profit),
+            "rate": round(us_market_return, 1),
+            "color": "#412f95"
+        },
+        {
+            "name": "US AI Utility & Grid",
+            "value": int(us_ai_value),
+            "profit": int(us_ai_profit),
+            "rate": round(us_ai_return, 1),
+            "color": "#7875f4"
+        },
+        {
+            "name": "US Managed WRAP",
+            "value": int(wrap_value),
+            "profit": int(wrap_profit),
+            "rate": round(wrap_return, 1),
+            "color": "#ffb601"
+        },
+        {
+            "name": "KR Index Leverage",
+            "value": int(lv_value),
+            "profit": int(lv_profit),
+            "rate": round(lv_return, 1),
+            "color": "#ff7f05"
+        },
+        {
+            "name": "KR Sector ETFs",
+            "value": int(etf_value),
+            "profit": int(etf_profit),
+            "rate": round(etf_return, 1),
+            "color": "#ff76a6"
+        }
+    ]
+    
+    # 총합 계산
+    total_strategy_value = sum(s["value"] for s in strategies)
+    total_strategy_profit = sum(s["profit"] for s in strategies)
+    
+    # 비중 계산 (value 기준)
+    for strategy in strategies:
+        strategy["weight"] = round((strategy["value"] / total_strategy_value * 100), 1) if total_strategy_value > 0 else 0
+    
+    # --- 3. HTML 생성 ---
+    
+    # 좌측 상단: Total Portfolio Value
+    total_portfolio_value = total_strategy_value
+    total_profit_ov = total_strategy_profit
+    total_profit_rate_ov = round((total_profit_ov / (total_portfolio_value - total_profit_ov) * 100), 1) if (total_portfolio_value - total_profit_ov) > 0 else 0
+    
+    total_value_html = clean_html(f"""
+    <div class="total-value-card">
+        <div class="total-value-title">Total Portfolio Value</div>
+        <div class="total-value-amount">{total_portfolio_value:,}</div>
+        <div class="value-divider"></div>
+        <div class="profit-section">
+            <div class="profit-label">Total Profit</div>
+            <div class="profit-row">
+                <div class="profit-amount">+{total_profit_ov:,}</div>
+                <div class="profit-badge">+{total_profit_rate_ov}%</div>
             </div>
-            <div style="text-align: right; line-height: 24px;">
-                    <div style="display: flex; align-items: flex-start;">
-                        <img src="{icon_total}" width="20" height="20" style="margin-right:15px;"/>
-                        <div style="display: flex; flex-direction: column; justify-content: center; line-height: 20px; gap:4px; margin-right: 3px;">
-                            <span style="font-size: 20px; font-weight: bold; color:{green_color if current_profit >= 0 else red_color};">
-                                {currency}{current_profit:,.0f}
-                            </span>
-                        </div>
-                    </div>
-            </div>
-            </div>
-        </div>
-    """).strip()
-
-    def icon_up(size=16, color=green_color):
-        return f"""<svg xmlns="http://www.w3.org/2000/svg" width="{size}" height="{size}" fill="none" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16V8"/><path d="m8 12 4-4 4 4"/></svg>"""
-
-    def icon_down(size=16, color=red_color):
-        return f"""<svg xmlns="http://www.w3.org/2000/svg" width="{size}" height="{size}" fill="none" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v8"/><path d="m8 12 4 4 4-4"/></svg>"""
-
-    # ✅ 빈 DataFrame 체크 추가
-    if not df_summary.empty:
-        # 종목별 루프
-        for _, row in df_summary.sort_values("평가금액", ascending=False).iterrows():
-            name = row["종목명"]
-            profit = row["평가손익"]
-            profit_rate = row["수익률(%)"]
-            stock_value = row["평가금액"]
-            purchase_value = row["매입금액"]
-            qty = row["보유수량"]
-            avg_price = row["평균단가"]
-            current_price = row["현재가"]
-            icon_html = icon_up(size=24) if profit >= 0 else icon_down(size=24)
-
-            card_html_stock += dedent(f"""
-            <div class="stock-item" style="display: flex; justify-content: space-between; align-items: center; margin-bottom:10px;">
-                <div style="flex: 2.5; display: flex; align-items: center; gap: 10px; min-width: 0;" >
-                    {icon_html}
-                    <div>
-                        <div class="stock-label" style="font-weight:600;">{name}</div>
-                        <div style="font-size: 14px; font-weight: 500; color:#666; margin-top:2px;">
-                            {qty:,.0f}주
-                        </div>
-                    </div>
-                </div>
-                <div style="flex: 1; text-align: right; display: flex; flex-direction: column; justify-content: center; gap:4px;">
-                    <div style="font-size: 14px; font-weight: 500; color:#666; line-height: 22px;">
-                        @ {current_price:,.0f}
-                    </div>
-                    <div style="font-size: 14px; font-weight: 500; color:#666; line-height: 22px;">
-                        @ {avg_price:,.0f}
-                    </div>
-                </div>
-                <div style="flex: 1.5; text-align: right; display: flex; flex-direction: column; justify-content: center; gap:4px;">
-                    <div style="font-size: 14px; font-weight: 500; color:#666; line-height: 22px;">
-                        {currency}{stock_value:,.0f}
-                    </div>
-                    <div style="font-size: 14px; font-weight: 500; color:#666; line-height: 22px;">
-                        {currency}{purchase_value:,.0f}
-                    </div>
-                </div>
-                <div style="flex: 1.5; text-align: right; display: flex; flex-direction: column; justify-content: center; gap:4px;">
-                    <div style="font-size: 18px; font-weight: bold; color:{green_color if profit >= 0 else red_color}; line-height: 22px;">
-                        {currency}{profit:,.0f}
-                    </div>
-                    <div style="font-size: 16px; font-weight: 500; color:{'#5BA17B' if profit >= 0 else red_color}; line-height: 22px;">
-                        {profit_rate:.1f}%
-                    </div>
-                </div>
-            </div>
-            """)
-    else:
-        # ✅ 보유종목이 없는 경우 메시지 표시
-        card_html_stock += """
-        <div style="text-align: center; padding: 40px; color: #999; font-size: 18px;">
-            보유중인 종목이 없습니다
-        </div>
-        """
-
-    # ✅ Actual Profit 푸터 추가
-    if footer_key and footer_key in summary:
-        card_html_stock += f"""
-        <div class="card-item" style="background:white; display:flex; justify-content:space-between; align-items:center; margin-top:6px;">
-            <div class="item-label">{footer_label}</div>
-            <div class="item-return">{currency}{summary[footer_key]:,.0f}</div>
-        </div>
-        """.strip()
-
-    card_html_stock += "</div>"
-    return card_html_stock
-
-# 5. MIX 탭 --
-if selected_tab == "MIX":
-    us_value_krw = us_value * exchange_rate
-
-    lv_df = conn.read(worksheet="LV")
-    lv_df.columns = lv_df.columns.str.strip()
-
-    lv_profit = pd.to_numeric(lv_df["손익"], errors="coerce").sum()
-    us_profit = summary_us["total_profit"]
-    esop_profit = summary_esop["total_profit"]
-    mix_total_profit = local_total_summary["total_profit"] + us_profit + esop_profit + lv_profit
-
-    total_stock = local_value + pension_value + us_value_krw + wrap_value_krw + esop_value + lv_value
-    total_cash = savings + housing + deposit
-    total_asset = total_stock + total_cash
-
-    # ✅ 비율 계산 시 housing 제외
-    total_asset_for_ratio = total_stock + savings + deposit
-    cash_ratio = (savings + deposit) / total_asset_for_ratio
-    stock_ratio = total_stock / total_asset_for_ratio
-
-    icon_asset = "https://cdn-icons-png.flaticon.com/128/3914/3914398.png"
-    icon_stock = "https://cdn-icons-png.flaticon.com/128/15852/15852070.png"
-    icon_cash = "https://cdn-icons-png.flaticon.com/128/7928/7928197.png"
-
-    card_html_mix_total = f"""
-    <div class="card" style="display: flex; align-items: center; gap: 12px; background: #F4C2C2; padding: 20px 24px; border-radius: 12px;">
-        <img src="{icon_asset}" width="50" height="50" style="margin-right:10px;" />
-        <div>
-            <div class="card-title">Total Asset</div>
-            <div class="card-value">{total_asset:,.0f}</div>
         </div>
     </div>
-    """
-
-    card_html_mix_stock = f"""
-    <div class="card" style="display: flex; align-items: center; gap: 12px; background: #B7D9C8; padding: 20px 24px; border-radius: 12px;">
-        <img src="{icon_stock}" width="50" height="50" style="margin-right:10px;" />
-        <div>
-            <div style="display: flex; align-items: center; gap: 8px;">
-                <div class="card-title">Stock</div>
-                <div style="background-color: #A0C4B2; color: #3A5A4A; font-size: 16px; font-weight: bold; padding: 2px 10px; border-radius: 8px;">
-                    {stock_ratio * 100:,.1f}%
-                </div>
-            </div>
-            <div class="card-value">{total_stock:,.0f}</div>
-        </div>
-    </div>
-    """
-
-    card_html_mix_cash = f"""
-    <div class="card" style="display: flex; align-items: center; gap: 12px; background: #FBE8C6; padding: 20px 24px; border-radius: 12px;">
-        <img src="{icon_cash}" width="50" height="50" style="margin-right:10px;" />
-        <div>
-            <div style="display: flex; align-items: center; gap: 8px;">
-                <div class="card-title">Cash</div>
-                <div style="background-color: #EACD9E; color: #85642E; font-size: 16px; font-weight: bold; padding: 2px 10px; border-radius: 8px;">
-                    {cash_ratio * 100:.1f}%
-                </div>
-            </div>
-            <div class="card-value">{total_cash:,.0f}</div>
-        </div>
-    </div>
-    """
-
-    card_html_mix_total_detail = f"""
-    <div class="card" style="padding: 24px; border-radius: 12px;">
-    <div class="mix-item" style="display: flex; justify-content: space-between; align-items: baseline;">
-        <div class="item-label">Profit</div>
-        <div class="item-return">{mix_total_profit:,.0f}</div>
-    </div>
-    </div>
-    """
-
-    card_html_mix_stock_detail = f"""
-    <div class="card" style="padding: 24px; border-radius: 12px;">
-    <div class="mix-item" style="display: flex; justify-content: space-between; align-items: baseline;">
-        <div class="item-label">Local</div>
-        <div class="item-return">{local_value:,.0f}</div>
-    </div>
-    <div class="mix-item" style="display: flex; justify-content: space-between; align-items: baseline;">
-        <div class="item-label">Pension</div>
-        <div class="item-return">{pension_value:,.0f}</div>
-    </div>
-    <div class="mix-item" style="display: flex; justify-content: space-between; align-items: baseline;">
-        <div class="item-label">LV</div>
-        <div class="item-return">{lv_value:,.0f}</div>
-    </div>
-    <div class="mix-item" style="display: flex; justify-content: space-between; align-items: baseline;">
-        <div class="item-label">ESOP</div>
-        <div class="item-return">{esop_value:,.0f}</div>
-    </div>
-    <div class="mix-item" style="display: flex; justify-content: space-between; align-items: baseline;">
-        <div class="item-label">US</div>
-        <div class="item-return">$ {us_value:,.0f}</div>
-    </div>
-    <div class="mix-item" style="display: flex; justify-content: space-between; align-items: baseline;">
-        <div class="item-label">WRAP</div>
-        <div class="item-return">$ {wrap_value_usd:,.0f}</div>
-    </div>
-    </div>
-    """
-
-    card_html_mix_cash_detail = f"""
-    <div class="card" style="padding: 24px; border-radius: 12px;">
-    <div class="mix-item" style="display: flex; justify-content: space-between; align-items: baseline;">
-        <div class="item-label">Bank</div>
-        <div class="item-return">{savings:,.0f}</div>
-    </div>
-    <div class="mix-item" style="display: flex; justify-content: space-between; align-items: baseline;">
-        <div class="item-label">Housing</div>
-        <div class="item-return">{housing:,.0f}</div>
-    </div>
-    <div class="mix-item" style="display: flex; justify-content: space-between; align-items: baseline;">
-        <div class="item-label">Trading</div>
-        <div class="item-return">{deposit:,.0f}</div>
-    </div>
-    </div>
-    """
-
-
-# -- 레이아웃 구성 -- #
-
-if selected_tab == "MIX":
-    row1_col1, row1_col2, row1_col3 = st.columns(3)
-    with row1_col1:
-        st.markdown(card_html_mix_total, unsafe_allow_html=True)
-    with row1_col2:
-        st.markdown(card_html_mix_stock, unsafe_allow_html=True)
-    with row1_col3:
-        st.markdown(card_html_mix_cash, unsafe_allow_html=True)
-
-    row2_col1, row2_col2, row2_col3 = st.columns(3)
-    with row2_col1:
-        st.markdown(card_html_mix_total_detail, unsafe_allow_html=True)
-    with row2_col2:
-        st.markdown(card_html_mix_stock_detail, unsafe_allow_html=True)
-    with row2_col3:
-        st.markdown(card_html_mix_cash_detail, unsafe_allow_html=True)
-
-if selected_tab == "OTH":
-    # US
+    """)
+    
+    # 좌측 하단: Asset & Country Allocation (옵션 4 - 실제 데이터)
+    
+    # Stock = 5가지 전략의 Value 총합
+    stock_value_ov = total_strategy_value
+    
+    # Cash 계산
+    # 1. 전체 탭(ISA+Pension+IRP+ETF) Cash
+    local_cash = local_summary["cash"]
+    
+    # 2. US 탭 Cash (달러 -> 원화 환산)
     df_trade_us = trade_dfs["US"]
     df_cash_us = cash_df[cash_df["계좌명"] == "US"]
-    df_us, summary_us = calculate_account_summary(df_trade_us, df_cash_us, df_dividend)
+    _, s_us = calculate_account_summary(df_trade_us, df_cash_us, df_dividend, is_us_stock=True)
+    us_cash = s_us["cash"] * exchange_rate
+    
+    # 3. 입출금 탭 I1 셀 (별도 현금)
+    try:
+        separate_cash_df = conn.read(worksheet="입출금", usecols=[8], nrows=1, header=None)
+        separate_cash = float(separate_cash_df.iloc[0, 0]) if not separate_cash_df.empty else 0
+    except:
+        separate_cash = 0
+    
+    cash_value_ov = local_cash + us_cash + separate_cash
+    
+    # Asset Allocation 비중
+    total_asset = stock_value_ov + cash_value_ov
+    stock_ratio_ov = (stock_value_ov / total_asset * 100) if total_asset > 0 else 0
+    cash_ratio_ov = (cash_value_ov / total_asset * 100) if total_asset > 0 else 0
+    
+    # US = Strategy 1 + 2 + 3
+    us_value = strategies[0]["value"] + strategies[1]["value"] + strategies[2]["value"]
+    
+    # KR = Strategy 4 + 5
+    kr_value = strategies[3]["value"] + strategies[4]["value"]
+    
+    # Country Allocation 비중
+    total_country = us_value + kr_value
+    us_ratio = (us_value / total_country * 100) if total_country > 0 else 0
+    kr_ratio = (kr_value / total_country * 100) if total_country > 0 else 0
+    
+    allocation_html = clean_html(f"""
+    <div class="card">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <!-- Asset Allocation Card -->
+            <div style="background: linear-gradient(135deg, #6374b908 0%, #6374b902 100%);
+                        border-radius: 12px; padding: 24px;">
+                <div style="font-size: 13px; font-weight: 600; color: #7F8C8D; margin-bottom: 16px;">
+                    ASSET ALLOCATION
+                </div>
+                
+                <div style="display: flex; flex-direction: column; gap: 16px;">
+                    <!-- Stock -->
+                    <div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                            <span style="font-size: 14px; font-weight: 500; color: #555;">Stock</span>
+                            <span style="font-size: 14px; font-weight: 700; color: #6374b9;">{stock_ratio_ov:.1f}%</span>
+                        </div>
+                        <div style="font-size: 22px; font-weight: 700; color: #0f2f76;">{int(stock_value_ov):,}</div>
+                    </div>
+                    
+                    <div style="height: 1px; background: #e5e5e5;"></div>
+                    
+                    <!-- Cash -->
+                    <div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                            <span style="font-size: 14px; font-weight: 500; color: #555;">Cash</span>
+                            <span style="font-size: 14px; font-weight: 700; color: #95a5a6;">{cash_ratio_ov:.1f}%</span>
+                        </div>
+                        <div style="font-size: 22px; font-weight: 700; color: #0f2f76;">{int(cash_value_ov):,}</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Country Allocation Card -->
+            <div style="background: linear-gradient(135deg, #778AD508 0%, #778AD502 100%);
+                        border-radius: 12px; padding: 24px;">
+                <div style="font-size: 13px; font-weight: 600; color: #7F8C8D; margin-bottom: 16px;">
+                    COUNTRY ALLOCATION
+                </div>
+                
+                <div style="display: flex; flex-direction: column; gap: 16px;">
+                    <!-- US -->
+                    <div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                            <span style="font-size: 14px; font-weight: 500; color: #555;">US</span>
+                            <span style="font-size: 14px; font-weight: 700; color: #778AD5;">{us_ratio:.1f}%</span>
+                        </div>
+                        <div style="font-size: 22px; font-weight: 700; color: #0f2f76;">{int(us_value):,}</div>
+                    </div>
+                    
+                    <div style="height: 1px; background: #e5e5e5;"></div>
+                    
+                    <!-- KR -->
+                    <div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                            <span style="font-size: 14px; font-weight: 500; color: #555;">KR</span>
+                            <span style="font-size: 14px; font-weight: 700; color: #5BA17B;">{kr_ratio:.1f}%</span>
+                        </div>
+                        <div style="font-size: 22px; font-weight: 700; color: #0f2f76;">{int(kr_value):,}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    """)
+    
+    # 우측: Strategy Performance (최종 디자인 적용)
+    strategy_items = ""
+    for strategy in strategies:
+        strategy_items += f"""
+            <div style="display: grid; grid-template-columns: 100px 3fr 2fr 1fr;
+                        padding: 18px 20px; align-items: center;
+                        border-bottom: 1px solid #f0f0f0;
+                        transition: background 0.2s ease; cursor: pointer;"
+                 onmouseover="this.style.background='#f8f9fa'"
+                 onmouseout="this.style.background='transparent'">
+                
+                <div style="position: relative; width: 80px; height: 80px; flex-shrink: 0;">
+                    <div style="position: absolute; width: 80px; height: 80px; border-radius: 50%;
+                                background: conic-gradient(from 0deg, {strategy['color']} 0deg {strategy['weight'] * 3.6}deg, #e5e5e5 {strategy['weight'] * 3.6}deg 360deg);"></div>
+                    <div style="position: absolute; width: 56px; height: 56px; background: white;
+                                border-radius: 50%; top: 12px; left: 12px;"></div>
+                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+                                font-size: 16px; font-weight: 700; color: {strategy['color']}; z-index: 10;">
+                        {strategy['weight']}%
+                    </div>
+                </div>
+                
+                <div>
+                    <div style="font-size: 15px; font-weight: 600; color: #2C3E50;">
+                        {strategy['name']}
+                    </div>
+                </div>
+                
+                <div style="text-align: right; display: flex; flex-direction: column; gap: 6px;">
+                    <div style="font-size: 17px; font-weight: 600; color: #2C3E50;">
+                        {strategy['value']:,}
+                    </div>
+                    <div style="font-size: 15px; font-weight: 600; color: {'#27AE60' if strategy['profit'] >= 0 else '#C54E4A'};">
+                        {'+' if strategy['profit'] >= 0 else ''}{strategy['profit']:,}
+                    </div>
+                </div>
+                
+                <div style="text-align: right;">
+                    <div style="background: {strategy['color']}20; color: {strategy['color']};
+                                font-size: 14px; font-weight: 700;
+                                padding: 6px 12px; border-radius: 8px; display: inline-block;">
+                        {'+' if strategy['rate'] >= 0 else ''}{strategy['rate']}%
+                    </div>
+                </div>
+            </div>
+        """
+    
+    strategy_html = clean_html(f"""
+    <div class="card" style="height: 100%;">
+        <div class="card-title">Strategy Performance</div>
+        
+        <div style="display: grid; grid-template-columns: 100px 3fr 2fr 1fr;
+                    padding: 16px 20px; margin-top: 20px;
+                    background: #f8f9fa; border-radius: 8px;
+                    font-size: 13px; font-weight: 600; color: #6c757d;">
+            <div></div>
+            <div>Strategy</div>
+            <div style="text-align: right;">Value / Profit</div>
+            <div style="text-align: right;">Return</div>
+        </div>
+        
+        <div style="display: flex; flex-direction: column; gap: 2px; margin-top: 8px;">
+            {strategy_items}
+        </div>
+    </div>
+    """)
+    
+    # 레이아웃 (좌측: Total Value + Asset Allocation, 우측: Strategy Performance)
+    col_left, col_right = st.columns([1, 1.3])
+    with col_left:
+        st.markdown(total_value_html, unsafe_allow_html=True)
+        st.markdown(allocation_html, unsafe_allow_html=True)
+    with col_right:
+        st.markdown(strategy_html, unsafe_allow_html=True)
 
-    # ESOP
-    df_trade_esop = trade_dfs["사주"]
-    df_cash_esop = cash_df[cash_df["계좌명"] == "사주"]
-    df_esop, summary_esop = calculate_account_summary(df_trade_esop, df_cash_esop, df_dividend)
-
-    col1, col2 = st.columns([1, 1])
-    with col1:
-        st.markdown(make_holdings_card(df_esop, summary_esop, "#F7B7A3", title="ESOP"), unsafe_allow_html=True)
-    with col2:
-        st.markdown(make_holdings_card(df_us, summary_us, "#D6B8F9", title="US", currency="$ ", footer_key="actual_profit", footer_label="Realized P&L"), unsafe_allow_html=True)
-
-if selected_tab == "전체":
-    with st.container():
-        col_left, col_right = st.columns([1, 1.2])
-        with col_left:
-            st.markdown(card_html_profit, unsafe_allow_html=True)
-            st.markdown(card_html_balance, unsafe_allow_html=True)
-            st.markdown(card_html_weighting, unsafe_allow_html=True)  # ✅ 추가
-        with col_right:
-            st.markdown(card_html_stock, unsafe_allow_html=True)
-
-if selected_tab not in ["MIX", "OTH", "전체"]: 
+else:
+    # 기존 레이아웃 (그대로 유지)
     with st.container():
         col_left, col_right = st.columns([1, 1.2])
         with col_left:
