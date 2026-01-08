@@ -59,8 +59,8 @@ try:
     df_dividend = conn.read(worksheet="배당")
     df_dividend.columns = df_dividend.columns.str.strip()
     # 배당 시트에 "지급일" 같은 날짜 컬럼이 있다면:
-    df_dividend["지급일"] = pd.to_datetime(df_dividend["지급일"])
-    df_dividend = df_dividend[df_dividend["지급일"] <= SNAPSHOT_DATE]
+    df_dividend["배당일"] = pd.to_datetime(df_dividend["배당일"])
+    df_dividend = df_dividend[df_dividend["배당일"] <= SNAPSHOT_DATE]
     df_dividend["배당금"] = pd.to_numeric(df_dividend["배당금"], errors="coerce").fillna(0).astype(int)
 
     # WRAP 시트에서 K1(원금), M1(평가액) 셀 읽기
