@@ -1087,8 +1087,8 @@ if selected_tab == "성과":
                     font-size: 13px; font-weight: 600; color: #6c757d;">
             <div></div>
             <div>Strategy</div>
-            <div style="text-align: right;">Value / Profit</div>
-            <div style="text-align: right;">Return</div>
+            <div style="text-align: center;">Value / Profit</div>
+            <div style="text-align: center;">Return</div>
         </div>
         
         <div style="display: flex; flex-direction: column; gap: 2px; margin-top: 8px;">
