@@ -1067,7 +1067,7 @@ if selected_tab == "성과":
                     </div>
                 </div>
                 
-                <div style="text-align: right;">
+                <div style="text-align: center;">
                     <div style="background: {strategy['color']}20; color: {strategy['color']};
                                 font-size: 14px; font-weight: 700;
                                 padding: 6px 12px; border-radius: 8px; display: inline-block;">
