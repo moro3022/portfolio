@@ -348,7 +348,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- 커스텀 탭 디자인  ---
-ACCOUNT_NAMES = ["성과", "전체", "ISA", "Pension", "IRP", "ETF", "US"]
+ACCOUNT_NAMES = ["전체", "ISA", "Pension", "IRP", "ETF", "US", "성과"]
 green_color = "#3A866A"
 red_color = "#C54E4A"
 
@@ -356,7 +356,7 @@ red_color = "#C54E4A"
 selected_tab = option_menu(
     menu_title=None,
     options=ACCOUNT_NAMES,
-    icons=["back", "back", "geo-alt-fill","geo-alt-fill","geo-alt-fill","geo-alt-fill","geo-alt-fill"],
+    icons=["back", "geo-alt-fill","geo-alt-fill","geo-alt-fill","geo-alt-fill","geo-alt-fill","back"],
     orientation="horizontal",
     styles={
         "container": {"padding": "0!important", "background-color": "#E0E0E0"},
