@@ -356,7 +356,7 @@ red_color = "#C54E4A"
 selected_tab = option_menu(
     menu_title=None,
     options=ACCOUNT_NAMES,
-    icons=["back", "geo-alt-fill","geo-alt-fill","geo-alt-fill","geo-alt-fill","geo-alt-fill","file-bar-graph-fill"],
+    icons=["back", "geo-alt-fill","geo-alt-fill","geo-alt-fill","geo-alt-fill","geo-alt-fill","pie-chart-fill"],
     orientation="horizontal",
     styles={
         "container": {"padding": "0!important", "background-color": "#E0E0E0"},
@@ -1123,7 +1123,4 @@ else:
             st.markdown(card_html_profit, unsafe_allow_html=True)
             st.markdown(card_html_balance, unsafe_allow_html=True)
         with col_right:
-
             st.markdown(card_html_stock, unsafe_allow_html=True)
-
-
