@@ -1414,7 +1414,7 @@ if selected_tab == "성과":
                     return "+" if val >= 0 else ""
                 
                 # 투명 동그라미 (정렬용)
-                invisible_dot = ' <span style="color: #ffffff; font-size: 18px;">●</span>'
+                invisible_dot = ' <span style="color: #f0f7ff; font-size: 18px;">●</span>'
                 
                 monthly_performance_html += f"""
                 <div style="display: grid; grid-template-columns: 100px repeat(6, 1fr);
