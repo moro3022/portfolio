@@ -58,8 +58,8 @@ try:
     # 배당 시트 불러오기
     df_dividend = conn.read(worksheet="배당")
     df_dividend.columns = df_dividend.columns.str.strip()
-    df_dividend["거래일"] = pd.to_datetime(df_dividend["거래일"])
-    df_dividend = df_dividend[df_dividend["거래일"] <= SNAPSHOT_DATE]
+    df_dividend["배당일"] = pd.to_datetime(df_dividend["배당일"])
+    df_dividend = df_dividend[df_dividend["배당일"] <= SNAPSHOT_DATE]
     df_dividend["배당금"] = pd.to_numeric(df_dividend["배당금"], errors="coerce").fillna(0).astype(int)
 
     # WRAP 시트에서 K1(원금), M1(평가액) 셀 읽기
