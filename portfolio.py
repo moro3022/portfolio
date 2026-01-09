@@ -1220,7 +1220,7 @@ if selected_tab == "성과":
         monthly_performance_html += """
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
             <div style="font-size: 20px; font-weight: 600; color: #444;">Monthly Performance Detail</div>
-            <div style="font-size: 13px; color: #95a5a6;">Recent 6 months</div>
+            <div style="font-size: 13px; color: #95a5a6;">Recent 3 months</div>
         </div>
         """
         
