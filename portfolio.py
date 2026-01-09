@@ -1232,7 +1232,7 @@ if selected_tab == "성과":
                 
                 if not latest_month_data.empty:
                     mom_change = int(latest_month_data["손익변동"].values[0]) if pd.notna(latest_month_data["손익변동"].values[0]) else 0
-                    mom_color = "#27AE60" if mom_change >= 0 else "#C54E4A"
+                    mom_color = "#3A866A" if mom_change >= 0 else "#C54E4A"
                     sign = "+" if mom_change >= 0 else ""
                     
                     latest_strategies = strategy_monthly[strategy_monthly["기준일"] == latest_dates[0]]
@@ -1242,7 +1242,7 @@ if selected_tab == "성과":
                         return int(val[0]) if len(val) > 0 and pd.notna(val[0]) else 0
                     
                     def get_mom_color(val):
-                        return "#27AE60" if val >= 0 else "#C54E4A"
+                        return "#3A866A" if val >= 0 else "#C54E4A"
                     
                     def get_mom_sign(val):
                         return "+" if val >= 0 else ""
