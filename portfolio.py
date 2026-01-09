@@ -1227,7 +1227,7 @@ if selected_tab == "성과":
         # 상단: 최근 3개월 카드
         monthly_performance_html += '<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">'
         
-        colors = ["#667eea", "#95a5a6", "#bdc3c7"]
+        colors = ["#95a5a6", "#95a5a6", "#667eea"]
         
         for idx, row in recent_3_months.iterrows():
             month_str = row["기준일"].strftime("%B %Y")
@@ -1369,7 +1369,7 @@ if selected_tab == "성과":
                 total_mom = total_strategy_value - prev_total - total_purchase
                 
                 def get_mom_color(val):
-                    return "#27AE60" if val >= 0 else "#C54E4A"
+                    return "#3A866A" if val >= 0 else "#C54E4A"
                 
                 def get_mom_sign(val):
                     return "+" if val >= 0 else ""
