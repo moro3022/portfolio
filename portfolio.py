@@ -1111,25 +1111,21 @@ if selected_tab == "성과":
     # --- 월간 성과 데이터 불러오기 ---
     try:
         performance_df = conn.read(worksheet="성과")
-        performance_df.columns = performance_df.columns.str.strip()
-
-        st.write("=== 성과 데이터 확인 ===")
-        st.write(f"전체 행 수: {len(performance_df)}")
-        st.write("컬럼명:", performance_df.columns.tolist())
-        st.write("처음 5행:")
-        st.dataframe(performance_df.head())
-
+        performance_df.columns = performance_df.columns.str.strip()   
         performance_df["기준일"] = pd.to_datetime(performance_df["기준일"])
         
         # 최근 데이터가 위에 있다고 가정하고 정렬
         performance_df = performance_df.sort_values("기준일", ascending=False)
         
         # 월별로 그룹화 (Total 행만)
-        monthly_data = performance_df[performance_df["전략"] == "Total"].copy()
-        
-        # 최근 6개월 데이터
-        recent_6_months = monthly_data.head(6)
-        recent_3_months = monthly_data.head(3)
+        monthly_totals = performance_df.groupby("기준일").agg({
+            "평가액": "sum",
+            "누적수익": "sum",
+            "손익변동": "sum"
+        }).reset_index().sort_values("기준일", ascending=False)
+
+        recent_3_months = monthly_totals.head(3)  # 있는 만큼만
+        recent_6_months = monthly_totals.head(6)
         
     except Exception as e:
         st.error(f"성과 데이터 로드 실패: {e}")
@@ -1142,7 +1138,8 @@ if selected_tab == "성과":
         
         colors = ["#667eea", "#95a5a6", "#bdc3c7"]  # 당월, 전월, 전전월
         
-        for idx, (_, row) in enumerate(recent_3_months.iterrows()):
+        for idx, row in recent_3_months.iterrows():
+            color_idx = 0 if idx == recent_3_months.index[0] else (1 if len(recent_3_months) > 1 else 2)
             month_str = row["기준일"].strftime("%B %Y")  # January 2026
             total_asset = int(row["평가액"])
             mom_change = int(row["손익변동"]) if pd.notna(row["손익변동"]) else 0
@@ -1195,7 +1192,7 @@ if selected_tab == "성과":
         strategy_monthly = performance_df[performance_df["전략"] != "Total"].copy()
         
         # 기준일 기준 최근 6개월 필터링
-        latest_dates = monthly_data.head(6)["기준일"].tolist()
+        latest_dates = monthly_totals.head(6)["기준일"].tolist()
         strategy_monthly = strategy_monthly[strategy_monthly["기준일"].isin(latest_dates)]
         
         monthly_table_html = """
@@ -1220,7 +1217,7 @@ if selected_tab == "성과":
         """
         
         # 월별 데이터 행 생성
-        for idx, month_date in enumerate(latest_dates[:6]):
+        for idx, month_date in enumerate(latest_dates):  # 언팩 제거
             month_str = month_date.strftime("%Y-%m")
             
             # 해당 월의 전략별 데이터
@@ -1246,7 +1243,7 @@ if selected_tab == "성과":
             kr_sector_val = int(kr_sector[0]) if len(kr_sector) > 0 else 0
             
             # Total
-            total_row = monthly_data[monthly_data["기준일"] == month_date]
+            total_row = monthly_totals[monthly_totals["기준일"] == month_date]
             total_val = int(total_row["평가액"].values[0]) if not total_row.empty else 0
             
             # 배경색 (짝수 행)
@@ -1269,7 +1266,7 @@ if selected_tab == "성과":
         # MoM Change 행 추가
         if len(latest_dates) >= 2:
             # 가장 최근 월의 손익변동
-            latest_month_data = monthly_data[monthly_data["기준일"] == latest_dates[0]]
+            latest_month_data = monthly_totals[monthly_totals["기준일"] == latest_dates[0]]
             
             if not latest_month_data.empty:
                 mom_change = int(latest_month_data["손익변동"].values[0]) if pd.notna(latest_month_data["손익변동"].values[0]) else 0
