@@ -7,7 +7,7 @@ from streamlit_option_menu import option_menu
 from streamlit_gsheets import GSheetsConnection
 from textwrap import dedent
 
-SNAPSHOT_DATE = pd.Timestamp("2025-12-31")
+SNAPSHOT_DATE = pd.Timestamp("2025-11-30")
 
 # --- 기본 설정 ---
 ACCOUNT_NAMES = ["ISA", "Pension", "IRP", "ETF", "US", "사주", "LV"]
@@ -1141,4 +1141,5 @@ else:
             st.markdown(card_html_balance, unsafe_allow_html=True)
         with col_right:
             st.markdown(card_html_stock, unsafe_allow_html=True)
+
 
