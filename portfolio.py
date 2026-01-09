@@ -1310,6 +1310,7 @@ if selected_tab == "성과":
                 """
         
         monthly_table_html += "</div>"
+        monthly_table_html = clean_html(monthly_table_html)
     else:
         monthly_table_html = ""
  
@@ -1348,5 +1349,4 @@ else:
             st.markdown(card_html_balance, unsafe_allow_html=True)
         with col_right:
             st.markdown(card_html_stock, unsafe_allow_html=True)
-
 
