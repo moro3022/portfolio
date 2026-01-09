@@ -1339,10 +1339,10 @@ if selected_tab == "성과":
 
                 # 이전 달 데이터 가져오기 (인디케이터용)
                 us_market_indicator = ' <span style="color: #ffffff; font-size: 18px;">●</span>'  # 기본값 회색
-                us_ai_indicator = ' <span style="color: #95a5a6; font-size: 18px;">●</span>'
-                us_wrap_indicator = ' <span style="color: #95a5a6; font-size: 18px;">●</span>'
-                kr_leverage_indicator = ' <span style="color: #95a5a6; font-size: 18px;">●</span>'
-                kr_sector_indicator = ' <span style="color: #95a5a6; font-size: 18px;">●</span>'
+                us_ai_indicator = ' <span style="color: #ffffff; font-size: 18px;">●</span>'
+                us_wrap_indicator = ' <span style="color: #ffffff; font-size: 18px;">●</span>'
+                kr_leverage_indicator = ' <span style="color: #ffffff; font-size: 18px;">●</span>'
+                kr_sector_indicator = ' <span style="color: #ffffff; font-size: 18px;">●</span>'
 
                 if idx < len(latest_dates) - 1:  # 이전 달이 있는 경우
                     prev_date = latest_dates[idx + 1]
