@@ -1327,12 +1327,12 @@ if selected_tab == "성과":
     # 기존 col_left, col_right 레이아웃 후에:
     
     # 상단 카드들을 card 클래스로 감싸기
-    monthly_cards_final = f"""
+    monthly_cards_final = clean_html(f"""
     <div class="card">
         {month_cards_html}
         {strategy_summary_html}
     </div>
-    """
+    """)
     
     # 월간 성과 표시
     if month_cards_html:
