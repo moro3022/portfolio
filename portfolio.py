@@ -1136,6 +1136,13 @@ if selected_tab == "성과":
     if not recent_3_months.empty:
         # 카드 시작
         monthly_performance_html = '<div class="card" style="margin-top: 24px;">'
+
+        monthly_performance_html += """
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <div style="font-size: 20px; font-weight: 600; color: #444;">Monthly Performance Detail</div>
+            <div style="font-size: 13px; color: #95a5a6;">Recent 3 months</div>
+        </div>
+        """
         
         # 상단: 최근 3개월 카드
         monthly_performance_html += '<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">'
@@ -1176,10 +1183,6 @@ if selected_tab == "성과":
             
             # 테이블 헤더
             monthly_performance_html += """
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <div style="font-size: 20px; font-weight: 600; color: #444;">Monthly Performance Detail</div>
-                <div style="font-size: 13px; color: #95a5a6;">Recent 6 months</div>
-            </div>
             <div style="display: grid; grid-template-columns: 100px repeat(6, 1fr);
                         padding: 12px 16px; background: #f8f9fa; border-radius: 8px;
                         font-size: 12px; font-weight: 600; color: #6c757d; margin-bottom: 8px;">
