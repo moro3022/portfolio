@@ -1112,6 +1112,13 @@ if selected_tab == "성과":
     try:
         performance_df = conn.read(worksheet="성과")
         performance_df.columns = performance_df.columns.str.strip()
+
+        st.write("=== 성과 데이터 확인 ===")
+        st.write(f"전체 행 수: {len(performance_df)}")
+        st.write("컬럼명:", performance_df.columns.tolist())
+        st.write("처음 5행:")
+        st.dataframe(performance_df.head())
+
         performance_df["기준일"] = pd.to_datetime(performance_df["기준일"])
         
         # 최근 데이터가 위에 있다고 가정하고 정렬
