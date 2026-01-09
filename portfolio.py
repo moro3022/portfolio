@@ -1151,8 +1151,20 @@ if selected_tab == "성과":
         
         for idx, row in recent_3_months.iterrows():
             month_str = row["기준일"].strftime("%B %Y")
-            total_asset = int(row["평가액"])
-            mom_change = int(row["손익변동"]) if pd.notna(row["손익변동"]) else 0
+            # 첫 번째(최근) 월만 Strategy Performance에서
+            if idx == recent_3_months.index[0]:
+                total_asset = total_strategy_value  # Strategy Performance 합계
+                # 이전 달이 있으면 MoM 계산
+                if len(recent_3_months) > 1:
+                    prev_month_value = int(recent_3_months.iloc[1]["평가액"])
+                    mom_change = total_asset - prev_month_value
+                else:
+                    mom_change = 0
+            else:
+                # 나머지는 성과 시트에서
+                total_asset = int(row["평가액"])
+                mom_change = int(row["손익변동"]) if pd.notna(row["손익변동"]) else 0
+            
             sign = "+" if mom_change >= 0 else ""
             color_idx = min(idx, 2)
             
