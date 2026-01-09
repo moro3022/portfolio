@@ -1325,7 +1325,7 @@ if selected_tab == "성과":
                 def get_indicator(current_val, prev_val):
                     """이전월 대비 손익을 이전월 평가액의 %로 계산하여 인디케이터 반환"""
                     if prev_val == 0:
-                        return ""  # 이전 데이터 없음
+                        return ' <span style="color: #95a5a6; font-size: 18px;">●</span>'  # 이전 데이터 없음 → 회색
                     
                     change = current_val - prev_val
                     change_rate = (change / prev_val) * 100
@@ -1336,14 +1336,14 @@ if selected_tab == "성과":
                         return ' <span style="color: #C54E4A; font-size: 18px;">●</span>'
                     else:
                         return ' <span style="color: #95a5a6; font-size: 18px;">●</span>'
-                
+
                 # 이전 달 데이터 가져오기 (인디케이터용)
-                us_market_indicator = ""
-                us_ai_indicator = ""
-                us_wrap_indicator = ""
-                kr_leverage_indicator = ""
-                kr_sector_indicator = ""
-                
+                us_market_indicator = ' <span style="color: #ffffff; font-size: 18px;">●</span>'  # 기본값 회색
+                us_ai_indicator = ' <span style="color: #95a5a6; font-size: 18px;">●</span>'
+                us_wrap_indicator = ' <span style="color: #95a5a6; font-size: 18px;">●</span>'
+                kr_leverage_indicator = ' <span style="color: #95a5a6; font-size: 18px;">●</span>'
+                kr_sector_indicator = ' <span style="color: #95a5a6; font-size: 18px;">●</span>'
+
                 if idx < len(latest_dates) - 1:  # 이전 달이 있는 경우
                     prev_date = latest_dates[idx + 1]
                     prev_strategies = strategy_monthly[strategy_monthly["기준일"] == prev_date]
