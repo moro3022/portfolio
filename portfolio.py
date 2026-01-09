@@ -779,8 +779,8 @@ if selected_tab == "성과":
         df_trade = trade_dfs[acct_name]
         df_cash = cash_df[cash_df["계좌명"] == acct_name]
         
-        # S&P 또는 나스닥 유형 필터링
-        sp_nasdaq_mask = df_trade["유형"].isin(["S&P", "나스닥"])
+        # S&P 나스닥 TDF 유형 필터링
+        sp_nasdaq_mask = df_trade["유형"].isin(["S&P", "나스닥", "TDF"])
         df_filtered = df_trade[sp_nasdaq_mask]
         
         if not df_filtered.empty:
