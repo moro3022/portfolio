@@ -1227,7 +1227,7 @@ if selected_tab == "성과":
         # 상단: 최근 3개월 카드
         monthly_performance_html += '<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">'
         
-        colors = ["#95a5a6", "#95a5a6", "#667eea"]
+        colors = ["#95a5a6", "#95a5a6", "#778AD5"]
         
         for idx, row in recent_3_months.iterrows():
             month_str = row["기준일"].strftime("%B %Y")
