@@ -1307,7 +1307,7 @@ if selected_tab == "성과":
                     us_wrap_val = strategies[2]["value"]
                     kr_leverage_val = strategies[3]["value"]
                     kr_sector_val = strategies[4]["value"]
-                    total_val = total_strategy_value
+                    total_val = sum(s["value"] for s in strategies)
                 else:
                     # 나머지는 성과 시트에서
                     month_strategies = strategy_monthly[strategy_monthly["기준일"] == month_date]
@@ -1321,6 +1321,45 @@ if selected_tab == "성과":
                     total_row = monthly_totals[monthly_totals["기준일"] == month_date]
                     total_val = int(total_row["평가액"].values[0]) if not total_row.empty else 0
                 
+                # 이전 달과 비교 (인디케이터 표시)
+                def get_indicator(current_val, prev_val):
+                    """이전월 대비 손익을 이전월 평가액의 %로 계산하여 인디케이터 반환"""
+                    if prev_val == 0:
+                        return ""  # 이전 데이터 없음
+                    
+                    change = current_val - prev_val
+                    change_rate = (change / prev_val) * 100
+                    
+                    if change_rate > 1:
+                        return ' <span style="color: #3A866A; font-size: 18px;">●</span>'
+                    elif change_rate < -1:
+                        return ' <span style="color: #C54E4A; font-size: 18px;">●</span>'
+                    else:
+                        return ' <span style="color: #95a5a6; font-size: 18px;">●</span>'
+                
+                # 이전 달 데이터 가져오기 (인디케이터용)
+                us_market_indicator = ""
+                us_ai_indicator = ""
+                us_wrap_indicator = ""
+                kr_leverage_indicator = ""
+                kr_sector_indicator = ""
+                
+                if idx < len(latest_dates) - 1:  # 이전 달이 있는 경우
+                    prev_date = latest_dates[idx + 1]
+                    prev_strategies = strategy_monthly[strategy_monthly["기준일"] == prev_date]
+                    
+                    prev_us_market = int(prev_strategies[prev_strategies["전략"] == "US Market"]["평가액"].values[0]) if len(prev_strategies[prev_strategies["전략"] == "US Market"]) > 0 else 0
+                    prev_us_ai = int(prev_strategies[prev_strategies["전략"] == "US AI Power"]["평가액"].values[0]) if len(prev_strategies[prev_strategies["전략"] == "US AI Power"]) > 0 else 0
+                    prev_us_wrap = int(prev_strategies[prev_strategies["전략"] == "US Wrap"]["평가액"].values[0]) if len(prev_strategies[prev_strategies["전략"] == "US Wrap"]) > 0 else 0
+                    prev_kr_leverage = int(prev_strategies[prev_strategies["전략"] == "KR Leverage"]["평가액"].values[0]) if len(prev_strategies[prev_strategies["전략"] == "KR Leverage"]) > 0 else 0
+                    prev_kr_sector = int(prev_strategies[prev_strategies["전략"] == "KR Sector"]["평가액"].values[0]) if len(prev_strategies[prev_strategies["전략"] == "KR Sector"]) > 0 else 0
+                    
+                    us_market_indicator = get_indicator(us_market_val, prev_us_market)
+                    us_ai_indicator = get_indicator(us_ai_val, prev_us_ai)
+                    us_wrap_indicator = get_indicator(us_wrap_val, prev_us_wrap)
+                    kr_leverage_indicator = get_indicator(kr_leverage_val, prev_kr_leverage)
+                    kr_sector_indicator = get_indicator(kr_sector_val, prev_kr_sector)
+                
                 bg_color = "#fafafa" if idx % 2 == 1 else "transparent"
                 
                 monthly_performance_html += f"""
@@ -1328,11 +1367,11 @@ if selected_tab == "성과":
                             padding: 14px 16px; align-items: center; border-bottom: 1px solid #f0f0f0;
                             background: {bg_color};">
                     <div style="font-weight: 600; color: #2C3E50;">{month_str}</div>
-                    <div style="text-align: right; font-size: 14px; color: #555;">{us_market_val/1000000:.1f}M</div>
-                    <div style="text-align: right; font-size: 14px; color: #555;">{us_ai_val/1000000:.1f}M</div>
-                    <div style="text-align: right; font-size: 14px; color: #555;">{us_wrap_val/1000000:.1f}M</div>
-                    <div style="text-align: right; font-size: 14px; color: #555;">{kr_leverage_val/1000000:.1f}M</div>
-                    <div style="text-align: right; font-size: 14px; color: #555;">{kr_sector_val/1000000:.1f}M</div>
+                    <div style="text-align: right; font-size: 14px; color: #555;">{us_market_val/1000000:.1f}M{us_market_indicator}</div>
+                    <div style="text-align: right; font-size: 14px; color: #555;">{us_ai_val/1000000:.1f}M{us_ai_indicator}</div>
+                    <div style="text-align: right; font-size: 14px; color: #555;">{us_wrap_val/1000000:.1f}M{us_wrap_indicator}</div>
+                    <div style="text-align: right; font-size: 14px; color: #555;">{kr_leverage_val/1000000:.1f}M{kr_leverage_indicator}</div>
+                    <div style="text-align: right; font-size: 14px; color: #555;">{kr_sector_val/1000000:.1f}M{kr_sector_indicator}</div>
                     <div style="text-align: right; font-size: 16px; font-weight: 700; color: #0f2f76;">{total_val/1000000:.1f}M</div>
                 </div>
                 """
