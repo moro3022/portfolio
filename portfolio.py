@@ -1213,11 +1213,14 @@ if selected_tab == "성과":
         """
         
         # 월별 데이터 행 생성
-        for idx, (_, month_row) in enumerate(latest_dates[:6]):
-            month_str = month_row.strftime("%Y-%m")
+        for idx, month_date in enumerate(latest_dates[:6]):
+            month_str = month_date.strftime("%Y-%m")
             
             # 해당 월의 전략별 데이터
-            month_strategies = strategy_monthly[strategy_monthly["기준일"] == month_row]
+            month_strategies = strategy_monthly[strategy_monthly["기준일"] == month_date]
+            
+            # 해당 월의 전략별 데이터
+            month_strategies = strategy_monthly[strategy_monthly["기준일"] == month_date]
             
             # 전략별 평가액 추출
             us_market = month_strategies[month_strategies["전략"] == "US Market"]["평가액"].values
@@ -1236,7 +1239,7 @@ if selected_tab == "성과":
             kr_sector_val = int(kr_sector[0]) if len(kr_sector) > 0 else 0
             
             # Total
-            total_row = monthly_data[monthly_data["기준일"] == month_row]
+            total_row = monthly_data[monthly_data["기준일"] == month_date]
             total_val = int(total_row["평가액"].values[0]) if not total_row.empty else 0
             
             # 배경색 (짝수 행)
