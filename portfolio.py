@@ -1226,15 +1226,16 @@ if not recent_3_months.empty:
     
     # 상단: 최근 3개월 카드
     monthly_performance_html += '<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">'
-    
+
     colors = ["#667eea", "#95a5a6", "#bdc3c7"]
-    
+
     for idx, row in recent_3_months.iterrows():
         month_str = row["기준일"].strftime("%B %Y")
         
         # 첫 번째(최근) 월만 Strategy Performance에서
         if idx == recent_3_months.index[0]:
-            total_asset = total_strategy_value
+            # strategies 리스트에서 value 합계 계산
+            total_asset = sum(s["value"] for s in strategies)
             
             # MoM 계산: 이전 달이 있으면
             if len(recent_3_months) > 1:
@@ -1307,7 +1308,7 @@ if not recent_3_months.empty:
                 us_wrap_val = strategies[2]["value"]
                 kr_leverage_val = strategies[3]["value"]
                 kr_sector_val = strategies[4]["value"]
-                total_val = total_strategy_value
+                total_val = sum(s["value"] for s in strategies)
             else:
                 # 나머지는 성과 시트에서
                 month_strategies = strategy_monthly[strategy_monthly["기준일"] == month_date]
