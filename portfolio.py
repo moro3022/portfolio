@@ -7,6 +7,8 @@ from streamlit_option_menu import option_menu
 from streamlit_gsheets import GSheetsConnection
 from textwrap import dedent
 
+SNAPSHOT_DATE = pd.Timestamp("2025-12-31")
+
 # --- 기본 설정 ---
 ACCOUNT_NAMES = ["ISA", "Pension", "IRP", "ETF", "US", "사주", "LV"]
 
@@ -19,6 +21,7 @@ try:
     cash_df = conn.read(worksheet="입출금")
     cash_df.columns = cash_df.columns.str.strip()
     cash_df["거래일"] = pd.to_datetime(cash_df["거래일"])
+    cash_df = cash_df[cash_df["거래일"] <= SNAPSHOT_DATE]
 
     # WRAP 시트에서 환율(O열, 첫 번째 행) 읽기
     exchange_rate_df = conn.read(worksheet="WRAP", usecols=[14], nrows=1, header=None)
@@ -39,6 +42,8 @@ try:
             df['종목코드'] = df['종목코드'].astype(str).str.split('.').str[0].str.zfill(6)
 
         df["거래일"] = pd.to_datetime(df["거래일"])
+        trade_dfs[acct] = df[df["거래일"] <= SNAPSHOT_DATE]
+        df = trade_dfs[acct]
         df["제세금"] = pd.to_numeric(df["제세금"], errors="coerce").fillna(0)
         df["단가"] = pd.to_numeric(df["단가"], errors="coerce").fillna(0)
         df["수량"] = pd.to_numeric(df["수량"], errors="coerce").fillna(0)
@@ -53,6 +58,8 @@ try:
     # 배당 시트 불러오기
     df_dividend = conn.read(worksheet="배당")
     df_dividend.columns = df_dividend.columns.str.strip()
+    df_dividend["거래일"] = pd.to_datetime(df_dividend["거래일"])
+    df_dividend = df_dividend[df_dividend["거래일"] <= SNAPSHOT_DATE]
     df_dividend["배당금"] = pd.to_numeric(df_dividend["배당금"], errors="coerce").fillna(0).astype(int)
 
     # WRAP 시트에서 K1(원금), M1(평가액) 셀 읽기
@@ -116,8 +123,17 @@ def calculate_account_summary(df_trade, df_cash, df_dividend, is_us_stock=False)
                 else:
                     try:
                         price_data = get_price_data(str(code), source="fdr")
-                        current_price = price_data.iloc[-1]["Close"]
-                        prev_close = price_data.iloc[-2]["Close"]
+                        # 2025-12-31 이전 데이터만 필터링
+                        price_data = price_data[price_data.index <= SNAPSHOT_DATE]
+                        if not price_data.empty:
+                            current_price = price_data.iloc[-1]["Close"]
+                            if len(price_data) > 1:
+                                prev_close = price_data.iloc[-2]["Close"]
+                            else:
+                                prev_close = current_price
+                        else:
+                            current_price = 0
+                            prev_close = 0
                     except:
                         current_price = 0
                         prev_close = 0
