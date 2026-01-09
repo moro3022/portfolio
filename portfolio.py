@@ -1413,15 +1413,18 @@ if selected_tab == "성과":
                 def get_mom_sign(val):
                     return "+" if val >= 0 else ""
                 
+                # 투명 동그라미 (정렬용)
+                invisible_dot = ' <span style="color: #ffffff; font-size: 18px;">●</span>'
+                
                 monthly_performance_html += f"""
                 <div style="display: grid; grid-template-columns: 100px repeat(6, 1fr);
                             padding: 14px 16px; align-items: center; background: #f0f7ff; border-radius: 8px; margin-top: 8px;">
                     <div style="font-weight: 700; color: #0f2f76;">MoM Change</div>
-                    <div style="text-align: right; font-size: 14px; font-weight: 600; color: {get_mom_color(us_market_mom)};">{get_mom_sign(us_market_mom)}{us_market_mom/1000000:.1f}M</div>
-                    <div style="text-align: right; font-size: 14px; font-weight: 600; color: {get_mom_color(us_ai_mom)};">{get_mom_sign(us_ai_mom)}{us_ai_mom/1000000:.1f}M</div>
-                    <div style="text-align: right; font-size: 14px; font-weight: 600; color: {get_mom_color(us_wrap_mom)};">{get_mom_sign(us_wrap_mom)}{us_wrap_mom/1000000:.1f}M</div>
-                    <div style="text-align: right; font-size: 14px; font-weight: 600; color: {get_mom_color(kr_leverage_mom)};">{get_mom_sign(kr_leverage_mom)}{kr_leverage_mom/1000000:.1f}M</div>
-                    <div style="text-align: right; font-size: 14px; font-weight: 600; color: {get_mom_color(kr_sector_mom)};">{get_mom_sign(kr_sector_mom)}{kr_sector_mom/1000000:.1f}M</div>
+                    <div style="text-align: right; font-size: 14px; font-weight: 600; color: {get_mom_color(us_market_mom)};">{get_mom_sign(us_market_mom)}{us_market_mom/1000000:.1f}M{invisible_dot}</div>
+                    <div style="text-align: right; font-size: 14px; font-weight: 600; color: {get_mom_color(us_ai_mom)};">{get_mom_sign(us_ai_mom)}{us_ai_mom/1000000:.1f}M{invisible_dot}</div>
+                    <div style="text-align: right; font-size: 14px; font-weight: 600; color: {get_mom_color(us_wrap_mom)};">{get_mom_sign(us_wrap_mom)}{us_wrap_mom/1000000:.1f}M{invisible_dot}</div>
+                    <div style="text-align: right; font-size: 14px; font-weight: 600; color: {get_mom_color(kr_leverage_mom)};">{get_mom_sign(kr_leverage_mom)}{kr_leverage_mom/1000000:.1f}M{invisible_dot}</div>
+                    <div style="text-align: right; font-size: 14px; font-weight: 600; color: {get_mom_color(kr_sector_mom)};">{get_mom_sign(kr_sector_mom)}{kr_sector_mom/1000000:.1f}M{invisible_dot}</div>
                     <div style="text-align: right; font-size: 16px; font-weight: 700; color: {get_mom_color(total_mom)};">{get_mom_sign(total_mom)}{total_mom/1000000:.1f}M</div>
                 </div>
                 """
