@@ -807,9 +807,10 @@ if selected_tab == "성과":
         
     # Strategy 2: US AI Power & Grid (전력)
     us_ai_value = 0
-    us_ai_profit = 0
+    us_ai_current_profit = 0  # 평가손익
+    us_ai_actual_profit = 0   # 실현손익
     us_ai_buy_cost = 0
-    
+
     for acct_name in ["ISA", "Pension", "IRP", "US"]:
         df_trade = trade_dfs[acct_name]
         df_cash = cash_df[cash_df["계좌명"] == acct_name]
@@ -819,18 +820,25 @@ if selected_tab == "성과":
         df_filtered = df_trade[power_mask]
         
         if not df_filtered.empty:
-            df_s, _ = calculate_account_summary(df_filtered, df_cash, df_dividend, is_us_stock=(acct_name == "US"))
+            df_s, s = calculate_account_summary(df_filtered, df_cash, df_dividend, is_us_stock=(acct_name == "US"))
             if not df_s.empty:
-                # US 계좌는 달러 단위이므로 환율 적용
                 if acct_name == "US":
                     us_ai_value += df_s["평가금액"].sum() * exchange_rate
-                    us_ai_profit += df_s["평가손익"].sum() * exchange_rate
+                    us_ai_current_profit += df_s["평가손익"].sum() * exchange_rate
                     us_ai_buy_cost += df_s["매입금액"].sum() * exchange_rate
                 else:
                     us_ai_value += df_s["평가금액"].sum()
-                    us_ai_profit += df_s["평가손익"].sum()
+                    us_ai_current_profit += df_s["평가손익"].sum()
                     us_ai_buy_cost += df_s["매입금액"].sum()
-    
+            
+            # 실현손익 추가
+            if acct_name == "US":
+                us_ai_actual_profit += s["actual_profit"] * exchange_rate
+            else:
+                us_ai_actual_profit += s["actual_profit"]
+
+    # 총 수익 = 평가 + 실현
+    us_ai_profit = us_ai_current_profit + us_ai_actual_profit
     us_ai_return = (us_ai_profit / us_ai_buy_cost * 100) if us_ai_buy_cost > 0 else 0
     
     # Strategy 3: US Managed WRAP
@@ -1440,6 +1448,124 @@ if selected_tab == "성과":
         monthly_performance_html = clean_html(monthly_performance_html)
     else:
         monthly_performance_html = ""
+
+    # === 실현손익 계산 검증 ===
+    st.markdown("---")
+    st.markdown("### 🔍 실현손익 계산 검증")
+    
+    # Strategy 1: US Market Index 검증
+    st.markdown("#### 1. US Market Index (S&P, 나스닥, TDF)")
+    
+    verification_data = []
+    
+    for acct_name in ["ISA", "Pension", "IRP", "US"]:
+        df_trade = trade_dfs[acct_name]
+        df_cash = cash_df[cash_df["계좌명"] == acct_name]
+        
+        # 전체 계좌
+        df_s_all, s_all = calculate_account_summary(df_trade, df_cash, df_dividend, is_us_stock=(acct_name == "US"))
+        
+        # 필터링 (S&P, 나스닥, TDF만)
+        sp_nasdaq_mask = df_trade["유형"].isin(["S&P", "나스닥", "TDF"])
+        df_filtered = df_trade[sp_nasdaq_mask]
+        
+        if not df_filtered.empty:
+            df_s_filtered, s_filtered = calculate_account_summary(df_filtered, df_cash, df_dividend, is_us_stock=(acct_name == "US"))
+            
+            # 환율 적용
+            multiplier = exchange_rate if acct_name == "US" else 1
+            
+            verification_data.append({
+                "계좌": acct_name,
+                "전체_평가손익": f"{s_all['current_profit'] * multiplier:,.0f}",
+                "전체_실현손익": f"{s_all['actual_profit'] * multiplier:,.0f}",
+                "필터_평가손익": f"{s_filtered['current_profit'] * multiplier:,.0f}",
+                "필터_실현손익": f"{s_filtered['actual_profit'] * multiplier:,.0f}",
+                "필터_총손익": f"{(s_filtered['current_profit'] + s_filtered['actual_profit']) * multiplier:,.0f}"
+            })
+    
+    df_verify = pd.DataFrame(verification_data)
+    st.dataframe(df_verify)
+    
+    # 합계 확인
+    st.markdown("**US Market Index 합계:**")
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("평가손익", f"{us_market_current_profit:,.0f}")
+    with col2:
+        st.metric("실현손익", f"{us_market_actual_profit:,.0f}")
+    with col3:
+        st.metric("총손익", f"{us_market_profit:,.0f}")
+    
+    # Strategy 2: US AI Power 검증
+    st.markdown("#### 2. US AI Power & Grid (전력)")
+    
+    verification_data_ai = []
+    
+    for acct_name in ["ISA", "Pension", "IRP", "US"]:
+        df_trade = trade_dfs[acct_name]
+        df_cash = cash_df[cash_df["계좌명"] == acct_name]
+        
+        # 필터링 (전력만)
+        power_mask = df_trade["유형"] == "전력"
+        df_filtered = df_trade[power_mask]
+        
+        if not df_filtered.empty:
+            df_s_filtered, s_filtered = calculate_account_summary(df_filtered, df_cash, df_dividend, is_us_stock=(acct_name == "US"))
+            
+            multiplier = exchange_rate if acct_name == "US" else 1
+            
+            verification_data_ai.append({
+                "계좌": acct_name,
+                "평가손익": f"{s_filtered['current_profit'] * multiplier:,.0f}",
+                "실현손익": f"{s_filtered['actual_profit'] * multiplier:,.0f}",
+                "총손익": f"{(s_filtered['current_profit'] + s_filtered['actual_profit']) * multiplier:,.0f}"
+            })
+    
+    if verification_data_ai:
+        df_verify_ai = pd.DataFrame(verification_data_ai)
+        st.dataframe(df_verify_ai)
+        
+        st.markdown("**US AI Power 합계:**")
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("평가손익", f"{us_ai_current_profit:,.0f}")
+        with col2:
+            st.metric("실현손익", f"{us_ai_actual_profit:,.0f}")
+        with col3:
+            st.metric("총손익", f"{us_ai_profit:,.0f}")
+    
+    # 전체 종목별 상세 확인
+    st.markdown("#### 3. 종목별 상세 (US Market Index)")
+    
+    all_holdings = []
+    for acct_name in ["ISA", "Pension", "IRP", "US"]:
+        df_trade = trade_dfs[acct_name]
+        df_cash = cash_df[cash_df["계좌명"] == acct_name]
+        
+        sp_nasdaq_mask = df_trade["유형"].isin(["S&P", "나스닥", "TDF"])
+        df_filtered = df_trade[sp_nasdaq_mask]
+        
+        if not df_filtered.empty:
+            df_s, s = calculate_account_summary(df_filtered, df_cash, df_dividend, is_us_stock=(acct_name == "US"))
+            
+            if not df_s.empty:
+                multiplier = exchange_rate if acct_name == "US" else 1
+                for _, row in df_s.iterrows():
+                    all_holdings.append({
+                        "계좌": acct_name,
+                        "종목명": row["종목명"],
+                        "유형": row["유형"],
+                        "평가금액": int(row["평가금액"] * multiplier),
+                        "평가손익": int(row["평가손익"] * multiplier),
+                        "수익률": f"{row['수익률(%)']:.2f}%"
+                    })
+    
+    if all_holdings:
+        df_holdings = pd.DataFrame(all_holdings)
+        st.dataframe(df_holdings)
+        
+        st.markdown(f"**종목별 평가손익 합계:** {df_holdings['평가손익'].sum():,.0f}")
 
     # 레이아웃
     col_left, col_right = st.columns([1, 1.3])
