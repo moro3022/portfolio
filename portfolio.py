@@ -770,34 +770,41 @@ def clean_html(html_string):
 if selected_tab == "성과":
     # --- 1. 전략별 데이터 계산 ---
     
-    # Strategy 1: US Market Index (S&P, 나스닥)
+    # Strategy 1: US Market Index
     us_market_value = 0
-    us_market_profit = 0
+    us_market_current_profit = 0  # 평가손익
+    us_market_actual_profit = 0   # 실현손익
     us_market_buy_cost = 0
-    
+
     for acct_name in ["ISA", "Pension", "IRP", "US"]:
         df_trade = trade_dfs[acct_name]
         df_cash = cash_df[cash_df["계좌명"] == acct_name]
         
-        # S&P, 나스닥, TDF 유형 필터링
         sp_nasdaq_mask = df_trade["유형"].isin(["S&P", "나스닥", "TDF"])
         df_filtered = df_trade[sp_nasdaq_mask]
         
         if not df_filtered.empty:
-            df_s, _ = calculate_account_summary(df_filtered, df_cash, df_dividend, is_us_stock=(acct_name == "US"))
+            df_s, s = calculate_account_summary(df_filtered, df_cash, df_dividend, is_us_stock=(acct_name == "US"))
             if not df_s.empty:
-                # US 계좌는 달러 단위이므로 환율 적용
                 if acct_name == "US":
                     us_market_value += df_s["평가금액"].sum() * exchange_rate
-                    us_market_profit += df_s["평가손익"].sum() * exchange_rate
+                    us_market_current_profit += df_s["평가손익"].sum() * exchange_rate
                     us_market_buy_cost += df_s["매입금액"].sum() * exchange_rate
                 else:
                     us_market_value += df_s["평가금액"].sum()
-                    us_market_profit += df_s["평가손익"].sum()
+                    us_market_current_profit += df_s["평가손익"].sum()
                     us_market_buy_cost += df_s["매입금액"].sum()
-    
+            
+            # 실현손익 추가 (summary에서)
+            if acct_name == "US":
+                us_market_actual_profit += s["actual_profit"] * exchange_rate
+            else:
+                us_market_actual_profit += s["actual_profit"]
+
+    # 총 수익 = 평가 + 실현
+    us_market_profit = us_market_current_profit + us_market_actual_profit
     us_market_return = (us_market_profit / us_market_buy_cost * 100) if us_market_buy_cost > 0 else 0
-    
+        
     # Strategy 2: US AI Power & Grid (전력)
     us_ai_value = 0
     us_ai_profit = 0
