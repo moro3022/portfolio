@@ -795,11 +795,21 @@ if selected_tab == "성과":
                     us_market_current_profit += df_s["평가손익"].sum()
                     us_market_buy_cost += df_s["매입금액"].sum()
             
-            # 실현손익 추가 (summary에서)
-            if acct_name == "US":
-                us_market_actual_profit += s["actual_profit"] * exchange_rate
+            # 배당금 계산 (해당 계좌 전체)
+            if not df_trade.empty and "계좌명" in df_trade.columns:
+                account_names = df_filtered["계좌명"].unique()
+                dividend_sum = df_dividend[df_dividend["계좌명"].isin(account_names)]["배당금"].sum()
+                dividend_total = dividend_sum if pd.notna(dividend_sum) else 0
             else:
-                us_market_actual_profit += s["actual_profit"]
+                dividend_total = 0
+            
+            # 실현손익에서 배당 제외
+            realized_only = s["actual_profit"] - dividend_total
+            
+            if acct_name == "US":
+                us_market_actual_profit += realized_only * exchange_rate
+            else:
+                us_market_actual_profit += realized_only
 
     # 총 수익 = 평가 + 실현
     us_market_profit = us_market_current_profit + us_market_actual_profit
@@ -831,11 +841,21 @@ if selected_tab == "성과":
                     us_ai_current_profit += df_s["평가손익"].sum()
                     us_ai_buy_cost += df_s["매입금액"].sum()
             
-            # 실현손익 추가
-            if acct_name == "US":
-                us_ai_actual_profit += s["actual_profit"] * exchange_rate
+            # 배당금 계산 (해당 계좌 전체)
+            if not df_trade.empty and "계좌명" in df_trade.columns:
+                account_names = df_filtered["계좌명"].unique()
+                dividend_sum = df_dividend[df_dividend["계좌명"].isin(account_names)]["배당금"].sum()
+                dividend_total = dividend_sum if pd.notna(dividend_sum) else 0
             else:
-                us_ai_actual_profit += s["actual_profit"]
+                dividend_total = 0
+            
+            # 실현손익에서 배당 제외
+            realized_only = s["actual_profit"] - dividend_total
+            
+            if acct_name == "US":
+                us_ai_actual_profit += realized_only * exchange_rate
+            else:
+                us_ai_actual_profit += realized_only
 
     # 총 수익 = 평가 + 실현
     us_ai_profit = us_ai_current_profit + us_ai_actual_profit
