@@ -79,7 +79,7 @@ def get_price_data(code: str, source: str = "fdr"):
         return yf.download(code, period="5d")
 
 
-def calculate_account_summary(df_trade, df_cash, df_dividend, is_us_stock=False, use_filtered_dividend=False):
+def calculate_account_summary(df_trade, df_cash, df_dividend, is_us_stock=False):
     summary_list = []
     realized_total = 0
     today_profit = 0
@@ -150,16 +150,120 @@ def calculate_account_summary(df_trade, df_cash, df_dividend, is_us_stock=False,
 
     # 배당금 계산 - NaN 처리 추가
     dividend_total = 0
-    if use_filtered_dividend:
-        # 성과 탭: 이미 필터링된 배당금을 그대로 사용
-        dividend_sum = df_dividend["배당금"].sum()
+    if not df_trade.empty and "계좌명" in df_trade.columns:
+        account_names = df_trade["계좌명"].unique()
+        dividend_sum = df_dividend[df_dividend["계좌명"].isin(account_names)]["배당금"].sum()
         dividend_total = dividend_sum if pd.notna(dividend_sum) else 0
+
+    # 빈 DataFrame 처리
+    if df_summary.empty:
+        current_value = 0
+        current_profit = 0
     else:
-        # 일반 탭: 계좌명으로 필터링
-        if not df_trade.empty and "계좌명" in df_trade.columns:
-            account_names = df_trade["계좌명"].unique()
-            dividend_sum = df_dividend[df_dividend["계좌명"].isin(account_names)]["배당금"].sum()
-            dividend_total = dividend_sum if pd.notna(dividend_sum) else 0
+        current_value = df_summary["평가금액"].sum()
+        current_profit = df_summary["평가손익"].sum()
+
+    # 계산된 값들의 NaN 처리
+    capital = (df_cash[df_cash["구분"] == "입금"]["금액"].sum() - df_cash[df_cash["구분"] == "출금"]["금액"].sum())
+    capital = capital if pd.notna(capital) else 0
+    
+    actual_profit = realized_total + dividend_total
+    actual_profit = actual_profit if pd.notna(actual_profit) else 0
+    
+    total_balance = capital + current_profit + actual_profit
+    cash = total_balance - current_value
+    total_profit_rate = (total_balance - capital) / capital * 100 if capital else 0
+
+    # NaN 체크를 추가한 summary 딕셔너리
+    summary = {
+        "capital": round(capital) if pd.notna(capital) else 0,
+        "current_value": round(current_value) if pd.notna(current_value) else 0,
+        "current_profit": round(current_profit) if pd.notna(current_profit) else 0,
+        "actual_profit": round(actual_profit) if pd.notna(actual_profit) else 0,
+        "total_balance": round(total_balance) if pd.notna(total_balance) else 0,
+        "cash": round(cash) if pd.notna(cash) else 0,
+        "total_profit": round(current_profit + actual_profit + dividend_total) if pd.notna(current_profit + actual_profit + dividend_total) else 0,
+        "total_profit_rate": round(total_profit_rate, 2) if pd.notna(total_profit_rate) else 0,
+        "today_profit": round(today_profit) if pd.notna(today_profit) else 0
+    }
+
+    return df_summary, summary
+
+def calculate_strategy_summary(df_trade, df_cash, df_dividend_filtered, is_us_stock=False):
+    """성과 탭 전용: 이미 필터링된 배당금을 사용"""
+    summary_list = []
+    realized_total = 0
+    today_profit = 0
+
+    for code, group in df_trade.groupby("종목코드"):
+        group = group.sort_values("거래일").copy()
+        name = group["종목명"].iloc[0]
+        asset_type = group["유형"].iloc[0]
+
+        avg_price = 0
+        hold_qty = 0
+        realized_profit = 0
+
+        for _, row in group.iterrows():
+            qty = row["수량"]
+            price = row["단가"]
+            fee = row["제세금"]
+            amt = row["거래금액"]
+
+            if row["구분"] == "매수":
+                total_cost = avg_price * hold_qty + amt + fee
+                hold_qty += qty
+                avg_price = total_cost / hold_qty if hold_qty != 0 else 0
+            else:
+                profit = (price - avg_price) * qty - fee
+                realized_profit += profit
+                hold_qty -= qty
+
+        if hold_qty > 0:
+            try:
+                if str(code) == "펀드":
+                    current_price = group["현재가"].dropna().iloc[-1] if "현재가" in group.columns else 0
+                    prev_close = current_price
+                else:
+                    try:
+                        price_data = get_price_data(str(code), source="fdr")
+                        current_price = price_data.iloc[-1]["Close"]
+                        prev_close = price_data.iloc[-2]["Close"]
+                    except:
+                        current_price = 0
+                        prev_close = 0
+            except:
+                current_price = 0
+                prev_close = 0
+
+            current_value = current_price * hold_qty
+            buy_cost = avg_price * hold_qty
+            profit = current_value - buy_cost
+            profit_rate = profit / buy_cost * 100 if buy_cost else 0
+            today_profit += (current_price - prev_close) * hold_qty 
+
+            summary_list.append({
+                "종목코드": code,
+                "종목명": name,
+                "유형": asset_type,
+                "보유수량": hold_qty,
+                "평균단가": round(avg_price),
+                "현재가": round(current_price),
+                "평가금액": round(current_value),
+                "매입금액": round(buy_cost),
+                "평가손익": round(profit),
+                "수익률(%)": round(profit_rate, 2)
+            })
+
+        realized_total += realized_profit
+
+    df_summary = pd.DataFrame(summary_list)
+
+    # 배당금 계산 - 필터링된 데이터를 그대로 사용
+    dividend_total = 0
+    if not df_dividend_filtered.empty:
+        dividend_sum = df_dividend_filtered["배당금"].sum()
+        dividend_total = dividend_sum if pd.notna(dividend_sum) else 0
 
     # 빈 DataFrame 처리
     if df_summary.empty:
@@ -812,7 +916,7 @@ if selected_tab == "성과":
         ]
         
         if not df_filtered.empty:
-            df_s, s = calculate_account_summary(df_filtered, df_cash, dividend_filtered, is_us_stock=(acct_name == "US"), use_filtered_dividend=True)
+            df_s, s = calculate_strategy_summary(df_filtered, df_cash, dividend_filtered, is_us_stock=(acct_name == "US"))
             if not df_s.empty:
                 if acct_name == "US":
                     us_market_value += df_s["평가금액"].sum() * exchange_rate
@@ -850,7 +954,7 @@ if selected_tab == "성과":
         ]
         
         if not df_filtered.empty:
-            df_s, s = calculate_account_summary(df_filtered, df_cash, dividend_filtered, is_us_stock=(acct_name == "US"))
+            df_s, s = calculate_strategy_summary(df_filtered, df_cash, dividend_filtered, is_us_stock=(acct_name == "US"))
             if not df_s.empty:
                 if acct_name == "US":
                     us_ai_value += df_s["평가금액"].sum() * exchange_rate
