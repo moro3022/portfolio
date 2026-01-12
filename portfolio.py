@@ -876,83 +876,73 @@ card_html_stock += "</div>"
 def clean_html(html_string):
     return ''.join(line.strip() for line in html_string.splitlines())
 
-
 if selected_tab == "성과":
     
+    # === 전략별 계산 통합 함수 ===
+    def calculate_strategy_by_type(type_filter, exchange_rate):
+        """유형별 전략 계산 통합 함수"""
+        value = 0
+        current_profit = 0
+        actual_profit = 0
+        buy_cost = 0
+        
+        for acct_name in ["ISA", "Pension", "IRP", "US"]:
+            df_trade = trade_dfs[acct_name]
+            df_cash = cash_df[cash_df["계좌명"] == acct_name]
+            
+            # 거래 필터링
+            if isinstance(type_filter, list):
+                mask = df_trade["유형"].isin(type_filter)
+                dividend_mask = df_dividend["유형"].isin(type_filter)
+            else:
+                mask = df_trade["유형"] == type_filter
+                dividend_mask = df_dividend["유형"] == type_filter
+            
+            df_filtered = df_trade[mask]
+            
+            # 배당 필터링
+            dividend_filtered = df_dividend[
+                (df_dividend["계좌명"] == acct_name) & dividend_mask
+            ]
+            
+            if not df_filtered.empty:
+                df_s, s = calculate_strategy_summary(df_filtered, df_cash, dividend_filtered, is_us_stock=(acct_name == "US"))
+                if not df_s.empty:
+                    multiplier = exchange_rate if acct_name == "US" else 1
+                    value += df_s["평가금액"].sum() * multiplier
+                    current_profit += df_s["평가손익"].sum() * multiplier
+                    buy_cost += df_s["매입금액"].sum() * multiplier
+                    actual_profit += s["actual_profit"] * multiplier
+        
+        profit = current_profit + actual_profit
+        return_rate = (profit / buy_cost * 100) if buy_cost > 0 else 0
+        
+        return {
+            "value": int(value),
+            "current_profit": int(current_profit),
+            "actual_profit": int(actual_profit),
+            "buy_cost": int(buy_cost),
+            "profit": int(profit),
+            "return": round(return_rate, 1)
+        }
+    
     # Strategy 1: US Market Index
-    us_market_value = 0
-    us_market_current_profit = 0
-    us_market_actual_profit = 0
-    us_market_buy_cost = 0
-
-    for acct_name in ["ISA", "Pension", "IRP", "US"]:
-        df_trade = trade_dfs[acct_name]
-        df_cash = cash_df[cash_df["계좌명"] == acct_name]
-        
-        # 거래 필터링
-        sp_nasdaq_mask = df_trade["유형"].isin(["S&P", "나스닥", "TDF"])
-        df_filtered = df_trade[sp_nasdaq_mask]
-        
-        # 배당 필터링 (추가!)
-        dividend_filtered = df_dividend[
-            (df_dividend["계좌명"] == acct_name) &
-            (df_dividend["유형"].isin(["S&P", "나스닥", "TDF"]))
-        ]
-        
-        if not df_filtered.empty:
-            df_s, s = calculate_strategy_summary(df_filtered, df_cash, dividend_filtered, is_us_stock=(acct_name == "US"))
-            if not df_s.empty:
-                if acct_name == "US":
-                    us_market_value += df_s["평가금액"].sum() * exchange_rate
-                    us_market_current_profit += df_s["평가손익"].sum() * exchange_rate
-                    us_market_buy_cost += df_s["매입금액"].sum() * exchange_rate
-                    us_market_actual_profit += s["actual_profit"] * exchange_rate
-                else:
-                    us_market_value += df_s["평가금액"].sum()
-                    us_market_current_profit += df_s["평가손익"].sum()
-                    us_market_buy_cost += df_s["매입금액"].sum()
-                    us_market_actual_profit += s["actual_profit"]
-
-    us_market_profit = us_market_current_profit + us_market_actual_profit
-    us_market_return = (us_market_profit / us_market_buy_cost * 100) if us_market_buy_cost > 0 else 0
-
+    strategy_1 = calculate_strategy_by_type(["S&P", "나스닥", "TDF"], exchange_rate)
+    us_market_value = strategy_1["value"]
+    us_market_current_profit = strategy_1["current_profit"]
+    us_market_actual_profit = strategy_1["actual_profit"]
+    us_market_buy_cost = strategy_1["buy_cost"]
+    us_market_profit = strategy_1["profit"]
+    us_market_return = strategy_1["return"]
 
     # Strategy 2: US AI Power & Grid
-    us_ai_value = 0
-    us_ai_current_profit = 0
-    us_ai_actual_profit = 0
-    us_ai_buy_cost = 0
-
-    for acct_name in ["ISA", "Pension", "IRP", "US"]:
-        df_trade = trade_dfs[acct_name]
-        df_cash = cash_df[cash_df["계좌명"] == acct_name]
-        
-        # 거래 필터링
-        power_mask = df_trade["유형"] == "전력"
-        df_filtered = df_trade[power_mask]
-        
-        # 배당 필터링 (추가!)
-        dividend_filtered = df_dividend[
-            (df_dividend["계좌명"] == acct_name) &
-            (df_dividend["유형"] == "전력")
-        ]
-        
-        if not df_filtered.empty:
-            df_s, s = calculate_strategy_summary(df_filtered, df_cash, dividend_filtered, is_us_stock=(acct_name == "US"))
-            if not df_s.empty:
-                if acct_name == "US":
-                    us_ai_value += df_s["평가금액"].sum() * exchange_rate
-                    us_ai_current_profit += df_s["평가손익"].sum() * exchange_rate
-                    us_ai_buy_cost += df_s["매입금액"].sum() * exchange_rate
-                    us_ai_actual_profit += s["actual_profit"] * exchange_rate
-                else:
-                    us_ai_value += df_s["평가금액"].sum()
-                    us_ai_current_profit += df_s["평가손익"].sum()
-                    us_ai_buy_cost += df_s["매입금액"].sum()
-                    us_ai_actual_profit += s["actual_profit"]
-
-    us_ai_profit = us_ai_current_profit + us_ai_actual_profit
-    us_ai_return = (us_ai_profit / us_ai_buy_cost * 100) if us_ai_buy_cost > 0 else 0
+    strategy_2 = calculate_strategy_by_type("전력", exchange_rate)
+    us_ai_value = strategy_2["value"]
+    us_ai_current_profit = strategy_2["current_profit"]
+    us_ai_actual_profit = strategy_2["actual_profit"]
+    us_ai_buy_cost = strategy_2["buy_cost"]
+    us_ai_profit = strategy_2["profit"]
+    us_ai_return = strategy_2["return"]
     
     # Strategy 3: US Managed WRAP
     wrap_value = wrap_value_usd * exchange_rate
@@ -983,7 +973,7 @@ if selected_tab == "성과":
     etf_value = s_etf["current_value"]
     etf_profit = s_etf["current_profit"] + s_etf["actual_profit"]
     etf_return = s_etf["total_profit_rate"]
-    
+ 
     # --- 2. 전략 리스트 생성 ---
     strategies = [
         {
