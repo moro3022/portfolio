@@ -769,6 +769,21 @@ def clean_html(html_string):
 
 if selected_tab == "성과":
     # --- 1. 전략별 데이터 계산 ---
+    # Strategy 1 계산 전에
+    st.write("=== 배당 필터링 확인 ===")
+    st.write("전체 배당 데이터:")
+    st.dataframe(df_dividend)
+
+    for acct_name in ["ISA", "Pension", "IRP", "US"]:
+        # 배당 필터링
+        dividend_filtered = df_dividend[
+            (df_dividend["계좌명"] == acct_name) &
+            (df_dividend["유형"].isin(["S&P", "나스닥", "TDF"]))
+        ]
+        
+        st.write(f"{acct_name} 계좌 필터링 결과:")
+        st.dataframe(dividend_filtered)
+        st.write(f"필터링된 배당 합계: {dividend_filtered['배당금'].sum():,.0f}")
     
     # Strategy 1: US Market Index
     us_market_value = 0
