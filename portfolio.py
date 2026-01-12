@@ -79,7 +79,7 @@ def get_price_data(code: str, source: str = "fdr"):
         return yf.download(code, period="5d")
 
 
-def calculate_account_summary(df_trade, df_cash, df_dividend, is_us_stock=False):
+def calculate_account_summary(df_trade, df_cash, df_dividend, is_us_stock=False, use_filtered_dividend=False):
     summary_list = []
     realized_total = 0
     today_profit = 0
@@ -150,10 +150,16 @@ def calculate_account_summary(df_trade, df_cash, df_dividend, is_us_stock=False)
 
     # 배당금 계산 - NaN 처리 추가
     dividend_total = 0
-    if not df_trade.empty and "계좌명" in df_trade.columns:
-        account_names = df_trade["계좌명"].unique()
-        dividend_sum = df_dividend[df_dividend["계좌명"].isin(account_names)]["배당금"].sum()
+    if use_filtered_dividend:
+        # 성과 탭: 이미 필터링된 배당금을 그대로 사용
+        dividend_sum = df_dividend["배당금"].sum()
         dividend_total = dividend_sum if pd.notna(dividend_sum) else 0
+    else:
+        # 일반 탭: 계좌명으로 필터링
+        if not df_trade.empty and "계좌명" in df_trade.columns:
+            account_names = df_trade["계좌명"].unique()
+            dividend_sum = df_dividend[df_dividend["계좌명"].isin(account_names)]["배당금"].sum()
+            dividend_total = dividend_sum if pd.notna(dividend_sum) else 0
 
     # 빈 DataFrame 처리
     if df_summary.empty:
@@ -806,7 +812,7 @@ if selected_tab == "성과":
         ]
         
         if not df_filtered.empty:
-            df_s, s = calculate_account_summary(df_filtered, df_cash, dividend_filtered, is_us_stock=(acct_name == "US"))
+            df_s, s = calculate_account_summary(df_filtered, df_cash, dividend_filtered, is_us_stock=(acct_name == "US"), use_filtered_dividend=True)
             if not df_s.empty:
                 if acct_name == "US":
                     us_market_value += df_s["평가금액"].sum() * exchange_rate
