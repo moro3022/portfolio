@@ -1397,6 +1397,7 @@ if selected_tab == "성과":
         if not recent_6_months.empty:
             strategy_monthly = performance_df[performance_df["전략"] != "Total"].copy()
             latest_dates = monthly_totals.head(6)["기준일"].tolist()
+            latest_dates.reverse()
             strategy_monthly = strategy_monthly[strategy_monthly["기준일"].isin(latest_dates)]
             
             # 테이블 헤더
