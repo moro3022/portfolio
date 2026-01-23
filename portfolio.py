@@ -1497,12 +1497,15 @@ if selected_tab == "성과":
             
             # MoM Change 행
             if len(latest_dates) >= 2:
+                current_month_idx = len(latest_dates) - 1
+                prev_month_idx = len(latest_dates) - 2
+
                 # 당월 신규 매수액
-                monthly_purchases = calculate_monthly_purchase(latest_dates[0])
+                monthly_purchases = calculate_monthly_purchase(latest_dates[current_month_idx])
                 
                 # 전월 데이터
-                prev_month_strategies = strategy_monthly[strategy_monthly["기준일"] == latest_dates[1]]
-                prev_month_totals = monthly_totals[monthly_totals["기준일"] == latest_dates[1]]
+                prev_month_strategies = strategy_monthly[strategy_monthly["기준일"] == latest_dates[prev_month_idx]]
+                prev_month_totals = monthly_totals[monthly_totals["기준일"] == latest_dates[prev_month_idx]]
                 
                 def calc_mom(strategy_name, current_val, prev_val, purchase):
                     """MoM = (당월 - 전월) - 신규 매수액"""
