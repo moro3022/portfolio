@@ -1420,7 +1420,7 @@ if selected_tab == "성과":
                 month_str = month_date.strftime("%Y-%m")
                 
                 # 최근월(첫 번째)만 Strategy Performance에서
-                if idx == 0:
+                if idx == len(latest_dates) - 1:
                     us_market_val = strategies[0]["value"]
                     us_ai_val = strategies[1]["value"]
                     us_wrap_val = strategies[2]["value"]
