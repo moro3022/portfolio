@@ -200,6 +200,14 @@ def calculate_strategy_summary(df_trade, df_cash, df_dividend_filtered, is_us_st
         name = group["종목명"].iloc[0]
         asset_type = group["유형"].iloc[0]
 
+        if as_of_date:
+            as_of_date_ts = pd.Timestamp(as_of_date)
+            group = group[group["거래일"] <= as_of_date_ts]
+        
+        # 필터링 후 빈 그룹이면 스킵
+        if group.empty:
+            continue
+
         avg_price = 0
         hold_qty = 0
         realized_profit = 0
@@ -949,7 +957,7 @@ if selected_tab == "성과":
     strategy_1 = calculate_strategy_by_type(
         ["S&P", "나스닥", "TDF"], 
         exchange_rate,
-        as_of_date="2025-11-30"  # 기준일 지정
+        as_of_date="2025-12-31"  # 기준일 지정
     )
     us_market_value = strategy_1["value"]
     us_market_current_profit = strategy_1["current_profit"]
