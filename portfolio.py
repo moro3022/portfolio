@@ -1463,8 +1463,8 @@ if selected_tab == "성과":
                 kr_leverage_indicator = ' <span style="color: #ffffff; font-size: 18px;">●</span>'
                 kr_sector_indicator = ' <span style="color: #ffffff; font-size: 18px;">●</span>'
 
-                if idx < len(latest_dates) - 1:  # 이전 달이 있는 경우
-                    prev_date = latest_dates[idx + 1]
+                if idx > 0: 
+                    prev_date = latest_dates[idx - 1]  
                     prev_strategies = strategy_monthly[strategy_monthly["기준일"] == prev_date]
                     
                     prev_us_market = int(prev_strategies[prev_strategies["전략"] == "US Market"]["평가액"].values[0]) if len(prev_strategies[prev_strategies["전략"] == "US Market"]) > 0 else 0
