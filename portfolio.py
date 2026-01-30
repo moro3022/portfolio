@@ -957,7 +957,7 @@ if selected_tab == "성과":
     strategy_1 = calculate_strategy_by_type(
         ["S&P", "나스닥", "TDF"], 
         exchange_rate,
-        as_of_date="2025-12-31"  # 기준일 지정
+        as_of_date="2025-11-30"  # 기준일 지정
     )
     us_market_value = strategy_1["value"]
     us_market_current_profit = strategy_1["current_profit"]
@@ -1608,4 +1608,5 @@ else:
             st.markdown(card_html_balance, unsafe_allow_html=True)
         with col_right:
             st.markdown(card_html_stock, unsafe_allow_html=True)
+
 
