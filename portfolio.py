@@ -189,7 +189,7 @@ def calculate_account_summary(df_trade, df_cash, df_dividend, is_us_stock=False)
 
     return df_summary, summary
 
-def calculate_strategy_summary(df_trade, df_cash, df_dividend_filtered, is_us_stock=False):
+def calculate_strategy_summary(df_trade, df_cash, df_dividend_filtered, is_us_stock=False, as_of_date=None):
     """성과 탭 전용: 이미 필터링된 배당금을 사용"""
     summary_list = []
     realized_total = 0
@@ -227,8 +227,23 @@ def calculate_strategy_summary(df_trade, df_cash, df_dividend_filtered, is_us_st
                 else:
                     try:
                         price_data = get_price_data(str(code), source="fdr")
-                        current_price = price_data.iloc[-1]["Close"]
-                        prev_close = price_data.iloc[-2]["Close"]
+                        
+                        # as_of_date가 지정된 경우 해당 날짜의 종가 사용
+                        if as_of_date:
+                            as_of_date_ts = pd.Timestamp(as_of_date)
+                            if as_of_date_ts in price_data.index:
+                                current_price = price_data.loc[as_of_date_ts, "Close"]
+                            else:
+                                # 해당 날짜가 없으면 그 이전 가장 가까운 날짜
+                                before_dates = price_data[price_data.index <= as_of_date_ts]
+                                if not before_dates.empty:
+                                    current_price = before_dates.iloc[-1]["Close"]
+                                else:
+                                    current_price = 0
+                            prev_close = current_price
+                        else:
+                            current_price = price_data.iloc[-1]["Close"]
+                            prev_close = price_data.iloc[-2]["Close"]
                     except:
                         current_price = 0
                         prev_close = 0
@@ -879,7 +894,7 @@ def clean_html(html_string):
 if selected_tab == "성과":
     
     # === 전략별 계산 통합 함수 ===
-    def calculate_strategy_by_type(type_filter, exchange_rate):
+    def calculate_strategy_by_type(type_filter, exchange_rate, as_of_date=None):
         """유형별 전략 계산 통합 함수"""
         value = 0
         current_profit = 0
@@ -906,7 +921,11 @@ if selected_tab == "성과":
             ]
             
             if not df_filtered.empty:
-                df_s, s = calculate_strategy_summary(df_filtered, df_cash, dividend_filtered, is_us_stock=(acct_name == "US"))
+                df_s, s = calculate_strategy_summary(
+                    df_filtered, df_cash, dividend_filtered, 
+                    is_us_stock=(acct_name == "US"),
+                    as_of_date=as_of_date  # 기준일 전달
+                )
                 if not df_s.empty:
                     multiplier = exchange_rate if acct_name == "US" else 1
                     value += df_s["평가금액"].sum() * multiplier
@@ -927,7 +946,11 @@ if selected_tab == "성과":
         }
     
     # Strategy 1: US Market Index
-    strategy_1 = calculate_strategy_by_type(["S&P", "나스닥", "TDF"], exchange_rate)
+    strategy_1 = calculate_strategy_by_type(
+        ["S&P", "나스닥", "TDF"], 
+        exchange_rate,
+        as_of_date="2025-12-31"  # 기준일 지정
+    )
     us_market_value = strategy_1["value"]
     us_market_current_profit = strategy_1["current_profit"]
     us_market_actual_profit = strategy_1["actual_profit"]
