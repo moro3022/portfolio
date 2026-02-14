@@ -1178,12 +1178,6 @@ if selected_tab == "성과":
                 current_month_idx = len(latest_dates) - 1
                 prev_month_idx = len(latest_dates) - 2
 
-                wrap_data = performance_df[
-                    (performance_df["기준일"] == latest_dates[current_month_idx]) &
-                    (performance_df["전략"] == "US Wrap")
-                ]
-                us_wrap_purchase = float(wrap_data["운용증가"].values[0]) if not wrap_data.empty and pd.notna(wrap_data["운용증가"].values[0]) else 0
-
                 prev_month_strategies = strategy_monthly[strategy_monthly["기준일"] == latest_dates[prev_month_idx]]
 
                 def calc_mom(current_val, prev_val, purchase):
@@ -1196,10 +1190,16 @@ if selected_tab == "성과":
                 prev_us_ai_profit = int(prev_month_strategies[prev_month_strategies["전략"] == "US AI Power"]["누적수익"].values[0]) if len(prev_month_strategies[prev_month_strategies["전략"] == "US AI Power"]) > 0 else 0
                 prev_kr_sector_profit = int(prev_month_strategies[prev_month_strategies["전략"] == "KR Sector"]["누적수익"].values[0]) if len(prev_month_strategies[prev_month_strategies["전략"] == "KR Sector"]) > 0 else 0
 
+                wrap_data = performance_df[
+                    (performance_df["기준일"] == latest_dates[current_month_idx]) &
+                    (performance_df["전략"] == "US Wrap")
+                ]
+                us_wrap_purchase = float(wrap_data["운용증가"].values[0]) if not wrap_data.empty and pd.notna(wrap_data["운용증가"].values[0]) else 0
+
                 us_market_mom = strategies[0]["profit"] - prev_us_market_profit
                 us_ai_mom = strategies[1]["profit"] - prev_us_ai_profit
                 kr_sector_mom = strategies[4]["profit"] - prev_kr_sector_profit
-                us_wrap_mom = calc_mom(strategies[2]["value"], prev_us_wrap, us_wrap_purchase["US WRAP"])
+                us_wrap_mom = calc_mom(strategies[2]["value"], prev_us_wrap, us_wrap_purchase)
                 kr_leverage_mom = calc_mom(strategies[3]["value"], prev_kr_leverage, 0)
 
                 total_mom = us_market_mom + us_ai_mom + us_wrap_mom + kr_leverage_mom + kr_sector_mom
