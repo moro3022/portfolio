@@ -1099,7 +1099,7 @@ if selected_tab == "성과":
         recent_6_months = pd.DataFrame()
         recent_3_months = pd.DataFrame()
 
-    # --- 인디케이터 함수 ---
+    # --- 인디케이터 스타일 ---
     def get_indicator(val):
         """과거월: 시트 월간수익률 기준 (소수 형태, 예: 0.025 = 2.5%)"""
         if val > 0.01:
@@ -1128,40 +1128,6 @@ if selected_tab == "성과":
             <div style="font-size: 13px; color: #95a5a6;">Recent 3 months</div>
         </div>
         """
-        
-        monthly_performance_html += '<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">'
-        
-        card_colors = ["#778AD5", "#95a5a6", "#95a5a6"]
-        
-        total_mom = 0
-
-        for i, (idx, row) in enumerate(recent_3_months.iterrows()):
-            month_str = row["기준일"].strftime("%B %Y")
-            
-            if idx == recent_3_months.index[0]:
-                total_asset = total_strategy_value
-                mom_change = total_mom
-            else:
-                total_asset = int(row["평가액"])
-                mom_change = int(row["손익변동"]) if pd.notna(row["손익변동"]) else 0
-            
-            sign = "+" if mom_change >= 0 else ""
-            
-            monthly_performance_html += f"""
-            <div style="background: {card_colors[i]}; border-radius: 12px; padding: 20px; color: white;">
-                <div style="font-size: 13px; opacity: 0.9; margin-bottom: 8px;">{month_str}</div>
-                <div style="font-size: 28px; font-weight: 700; margin-bottom: 16px;">{total_asset:,}</div>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <div style="background: rgba(255,255,255,0.2); padding: 4px 10px; border-radius: 6px; font-size: 13px; font-weight: 600;">
-                        {sign}{mom_change:,.0f}
-                    </div>
-                    <div style="font-size: 13px; opacity: 0.9;">MoM</div>
-                </div>
-            </div>
-            """
-        
-        monthly_performance_html += '</div>'
-        monthly_performance_html += '<div style="border-top: 1px solid #e5e5e5; margin: 32px 0;"></div>'
         
         if not recent_6_months.empty:
             strategy_monthly = performance_df[performance_df["전략"] != "Total"].copy()
@@ -1204,6 +1170,39 @@ if selected_tab == "성과":
 
                 total_mom = us_market_mom + us_ai_mom + us_wrap_mom + kr_leverage_mom + kr_sector_mom
             # =====================================================
+
+            monthly_performance_html += '<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">'
+            
+            card_colors = ["#778AD5", "#95a5a6", "#95a5a6"]
+        
+
+            for i, (idx, row) in enumerate(recent_3_months.iterrows()):
+                month_str = row["기준일"].strftime("%B %Y")
+                
+                if idx == recent_3_months.index[0]:
+                    total_asset = total_strategy_value
+                    mom_change = total_mom
+                else:
+                    total_asset = int(row["평가액"])
+                    mom_change = int(row["손익변동"]) if pd.notna(row["손익변동"]) else 0
+                
+                sign = "+" if mom_change >= 0 else ""
+                
+                monthly_performance_html += f"""
+                <div style="background: {card_colors[i]}; border-radius: 12px; padding: 20px; color: white;">
+                    <div style="font-size: 13px; opacity: 0.9; margin-bottom: 8px;">{month_str}</div>
+                    <div style="font-size: 28px; font-weight: 700; margin-bottom: 16px;">{total_asset:,}</div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <div style="background: rgba(255,255,255,0.2); padding: 4px 10px; border-radius: 6px; font-size: 13px; font-weight: 600;">
+                            {sign}{mom_change:,.0f}
+                        </div>
+                        <div style="font-size: 13px; opacity: 0.9;">MoM</div>
+                    </div>
+                </div>
+                """
+            
+            monthly_performance_html += '</div>'
+            monthly_performance_html += '<div style="border-top: 1px solid #e5e5e5; margin: 32px 0;"></div>'
 
             # 테이블 헤더
             monthly_performance_html += """
