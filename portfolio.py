@@ -1533,9 +1533,7 @@ if selected_tab == "성과":
                 kr_leverage_mom = calc_mom("KR Leverage", strategies[3]["value"], prev_kr_leverage, monthly_purchases["KR Leverage"])
                 
                 # Total MoM
-                prev_total = int(prev_month_totals["평가액"].values[0]) if not prev_month_totals.empty else 0
-                total_purchase = sum(monthly_purchases.values())
-                total_mom = total_strategy_value - prev_total - total_purchase
+                total_mom = us_market_mom + us_ai_mom + us_wrap_mom + kr_leverage_mom + kr_sector_mom
                 
                 def get_mom_color(val):
                     return "#3A866A" if val >= 0 else "#C54E4A"
