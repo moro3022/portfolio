@@ -1196,13 +1196,7 @@ if selected_tab == "성과":
             
             if idx == recent_3_months.index[0]:
                 total_asset = total_strategy_value
-                if len(recent_3_months) > 1:
-                    prev_month_value = int(recent_3_months.iloc[1]["평가액"])
-                    monthly_purchases = calculate_monthly_purchase(row["기준일"])
-                    total_monthly_purchase = sum(monthly_purchases.values())
-                    mom_change = total_asset - prev_month_value - total_monthly_purchase
-                else:
-                    mom_change = 0
+                mom_change = total_mom
             else:
                 total_asset = int(row["평가액"])
                 mom_change = int(row["손익변동"]) if pd.notna(row["손익변동"]) else 0
