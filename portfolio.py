@@ -1502,13 +1502,6 @@ if selected_tab == "성과":
 
                 # 당월 신규 매수액
                 monthly_purchases = calculate_monthly_purchase(latest_dates[current_month_idx])
-
-                # ← 여기에 추가
-                st.write("=== KR ETF MoM 디버그 ===")
-                st.write(f"monthly_purchases KR Sector: {monthly_purchases['KR Sector']:,}")
-                st.write(f"strategies[4] value: {strategies[4]['value']:,}")
-                st.write(f"prev_kr_sector: {prev_kr_sector:,}")
-                st.write(f"kr_sector_mom: {strategies[4]['value'] - prev_kr_sector - monthly_purchases['KR Sector']:,}")
                 
                 # 전월 데이터
                 prev_month_strategies = strategy_monthly[strategy_monthly["기준일"] == latest_dates[prev_month_idx]]
@@ -1519,17 +1512,25 @@ if selected_tab == "성과":
                     return current_val - prev_val - purchase
                 
                 # 각 전략별 MoM
+                #1-1. 직전월 평가액 - 구글시트 불러오기
                 prev_us_market = int(prev_month_strategies[prev_month_strategies["전략"] == "US Market"]["평가액"].values[0]) if len(prev_month_strategies[prev_month_strategies["전략"] == "US Market"]) > 0 else 0
                 prev_us_ai = int(prev_month_strategies[prev_month_strategies["전략"] == "US AI Power"]["평가액"].values[0]) if len(prev_month_strategies[prev_month_strategies["전략"] == "US AI Power"]) > 0 else 0
                 prev_us_wrap = int(prev_month_strategies[prev_month_strategies["전략"] == "US Wrap"]["평가액"].values[0]) if len(prev_month_strategies[prev_month_strategies["전략"] == "US Wrap"]) > 0 else 0
                 prev_kr_leverage = int(prev_month_strategies[prev_month_strategies["전략"] == "KR Leverage"]["평가액"].values[0]) if len(prev_month_strategies[prev_month_strategies["전략"] == "KR Leverage"]) > 0 else 0
                 prev_kr_sector = int(prev_month_strategies[prev_month_strategies["전략"] == "KR Sector"]["평가액"].values[0]) if len(prev_month_strategies[prev_month_strategies["전략"] == "KR Sector"]) > 0 else 0
+
+                #1-2. 직전월 누적수익 - 구글시트 불러오기                
+                prev_us_market_profit = int(prev_month_strategies[prev_month_strategies["전략"] == "US Market"]["누적수익"].values[0]) if len(prev_month_strategies[prev_month_strategies["전략"] == "US Market"]) > 0 else 0
+                prev_us_ai_profit = int(prev_month_strategies[prev_month_strategies["전략"] == "US AI Power"]["누적수익"].values[0]) if len(prev_month_strategies[prev_month_strategies["전략"] == "US AI Power"]) > 0 else 0
+                prev_kr_sector_profit = int(prev_month_strategies[prev_month_strategies["전략"] == "KR Sector"]["누적수익"].values[0]) if len(prev_month_strategies[prev_month_strategies["전략"] == "KR Sector"]) > 0 else 0
                 
-                us_market_mom = calc_mom("US Market", strategies[0]["value"], prev_us_market, monthly_purchases["US Market"])
-                us_ai_mom = calc_mom("US AI", strategies[1]["value"], prev_us_ai, monthly_purchases["US AI Power"])
+                #1-3. MOM = 당월 누적수익 - 직전월 누적수익
+                us_market_mom = strategies[0]["profit"] - prev_us_market_profit
+                us_ai_mom = strategies[1]["profit"] - prev_us_ai_profit
+                kr_sector_mom = strategies[4]["profit"] - prev_kr_sector_profit
+
                 us_wrap_mom = calc_mom("US WRAP", strategies[2]["value"], prev_us_wrap, monthly_purchases["US WRAP"])
                 kr_leverage_mom = calc_mom("KR Leverage", strategies[3]["value"], prev_kr_leverage, monthly_purchases["KR Leverage"])
-                kr_sector_mom = calc_mom("KR Sector", strategies[4]["value"], prev_kr_sector, monthly_purchases["KR Sector"])
                 
                 # Total MoM
                 prev_total = int(prev_month_totals["평가액"].values[0]) if not prev_month_totals.empty else 0
