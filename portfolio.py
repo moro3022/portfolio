@@ -1441,17 +1441,19 @@ if selected_tab == "성과":
                     total_val = int(total_row["평가액"].values[0]) if not total_row.empty else 0
                 
                 # 이전 달과 비교 (인디케이터 표시)
-                def get_indicator(current_val, prev_val):
-                    """이전월 대비 손익을 이전월 평가액의 %로 계산하여 인디케이터 반환"""
-                    if prev_val == 0:
-                        return ' <span style="color: #95a5a6; font-size: 18px;">●</span>'  # 이전 데이터 없음 → 회색
-                    
-                    change = current_val - prev_val
-                    change_rate = (change / prev_val) * 100
-                    
-                    if change_rate > 1:
+                def get_indicator(val):
+                    if val > 1:
                         return ' <span style="color: #3A866A; font-size: 18px;">●</span>'
-                    elif change_rate < -1:
+                    elif val < -1:
+                        return ' <span style="color: #C54E4A; font-size: 18px;">●</span>'
+                    else:
+                        return ' <span style="color: #95a5a6; font-size: 18px;">●</span>'
+
+                def get_indicator_by_mom(val):
+                    """당월: MoM 절대금액 기준"""
+                    if val > 0:
+                        return ' <span style="color: #3A866A; font-size: 18px;">●</span>'
+                    elif val < 0:
                         return ' <span style="color: #C54E4A; font-size: 18px;">●</span>'
                     else:
                         return ' <span style="color: #95a5a6; font-size: 18px;">●</span>'
@@ -1463,21 +1465,18 @@ if selected_tab == "성과":
                 kr_leverage_indicator = ' <span style="color: #ffffff; font-size: 18px;">●</span>'
                 kr_sector_indicator = ' <span style="color: #ffffff; font-size: 18px;">●</span>'
 
-                if idx > 0: 
-                    prev_date = latest_dates[idx - 1]  
-                    prev_strategies = strategy_monthly[strategy_monthly["기준일"] == prev_date]
-                    
-                    prev_us_market = int(prev_strategies[prev_strategies["전략"] == "US Market"]["평가액"].values[0]) if len(prev_strategies[prev_strategies["전략"] == "US Market"]) > 0 else 0
-                    prev_us_ai = int(prev_strategies[prev_strategies["전략"] == "US AI Power"]["평가액"].values[0]) if len(prev_strategies[prev_strategies["전략"] == "US AI Power"]) > 0 else 0
-                    prev_us_wrap = int(prev_strategies[prev_strategies["전략"] == "US Wrap"]["평가액"].values[0]) if len(prev_strategies[prev_strategies["전략"] == "US Wrap"]) > 0 else 0
-                    prev_kr_leverage = int(prev_strategies[prev_strategies["전략"] == "KR Leverage"]["평가액"].values[0]) if len(prev_strategies[prev_strategies["전략"] == "KR Leverage"]) > 0 else 0
-                    prev_kr_sector = int(prev_strategies[prev_strategies["전략"] == "KR Sector"]["평가액"].values[0]) if len(prev_strategies[prev_strategies["전략"] == "KR Sector"]) > 0 else 0
-                    
-                    us_market_indicator = get_indicator(us_market_val, prev_us_market)
-                    us_ai_indicator = get_indicator(us_ai_val, prev_us_ai)
-                    us_wrap_indicator = get_indicator(us_wrap_val, prev_us_wrap)
-                    kr_leverage_indicator = get_indicator(kr_leverage_val, prev_kr_leverage)
-                    kr_sector_indicator = get_indicator(kr_sector_val, prev_kr_sector)
+                if idx > 0:
+                    us_market_rate = float(month_strategies[month_strategies["전략"] == "US Market"]["월간수익률"].values[0]) if len(month_strategies[month_strategies["전략"] == "US Market"]) > 0 else 0
+                    us_ai_rate = float(month_strategies[month_strategies["전략"] == "US AI Power"]["월간수익률"].values[0]) if len(month_strategies[month_strategies["전략"] == "US AI Power"]) > 0 else 0
+                    us_wrap_rate = float(month_strategies[month_strategies["전략"] == "US Wrap"]["월간수익률"].values[0]) if len(month_strategies[month_strategies["전략"] == "US Wrap"]) > 0 else 0
+                    kr_leverage_rate = float(month_strategies[month_strategies["전략"] == "KR Leverage"]["월간수익률"].values[0]) if len(month_strategies[month_strategies["전략"] == "KR Leverage"]) > 0 else 0
+                    kr_sector_rate = float(month_strategies[month_strategies["전략"] == "KR Sector"]["월간수익률"].values[0]) if len(month_strategies[month_strategies["전략"] == "KR Sector"]) > 0 else 0
+
+                    us_market_indicator = get_indicator(us_market_rate)
+                    us_ai_indicator = get_indicator(us_ai_rate)
+                    us_wrap_indicator = get_indicator(us_wrap_rate)
+                    kr_leverage_indicator = get_indicator(kr_leverage_rate)
+                    kr_sector_indicator = get_indicator(kr_sector_rate)
                 
                 bg_color = "#fafafa" if idx % 2 == 1 else "transparent"
                 
