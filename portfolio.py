@@ -38,7 +38,7 @@ try:
     cash_df["거래일"] = pd.to_datetime(cash_df["거래일"])
 
     # WRAP 시트에서 환율(O열, 첫 번째 행) 읽기
-    exchange_rate    = float(wrap_df.iloc[0, 14]) if not wrap_df.empty else 1400
+    exchange_rate    = float(wrap_df.iloc[0, 14]) if (not wrap_df.empty and pd.notna(wrap_df.iloc[0, 14])) else 1400
 
     # 각 계좌 시트 불러오기
     TRADE_SHEET_NAMES = [name for name in ACCOUNT_NAMES if name not in ["LV"]]
@@ -69,8 +69,8 @@ try:
     df_dividend["배당금"] = pd.to_numeric(df_dividend["배당금"], errors="coerce").fillna(0).astype(int)
 
     # WRAP 시트에서 K1(원금), M1(평가액) 셀 읽기
-    wrap_capital_usd = float(wrap_df.iloc[0, 10]) if not wrap_df.empty else 0
-    wrap_value_usd   = float(wrap_df.iloc[0, 12]) if not wrap_df.empty else 0
+    wrap_capital_usd = float(wrap_df.iloc[0, 10]) if (not wrap_df.empty and pd.notna(wrap_df.iloc[0, 10])) else 0
+    wrap_value_usd   = float(wrap_df.iloc[0, 12]) if (not wrap_df.empty and pd.notna(wrap_df.iloc[0, 12])) else 0
 
     # 원화 환산
     wrap_capital = wrap_capital_usd * exchange_rate
