@@ -1217,12 +1217,12 @@ if selected_tab == "성과":
                         padding: 12px 16px; background: #f8f9fa; border-radius: 8px;
                         font-size: 12px; font-weight: 600; color: #6c757d; margin-bottom: 8px;">
                 <div>Month</div>
-                <div style="text-align: right; margin-right: 6px;">US Market</div>
-                <div style="text-align: right; margin-right: 24px;">US AI</div>
-                <div style="text-align: right; margin-right: 8px;">US WRAP</div>
+                <div style="text-align: right;">US Market</div>
+                <div style="text-align: right;">US AI</div>
+                <div style="text-align: right;">US WRAP</div>
                 <div style="text-align: right;">KR Leverage</div>
-                <div style="text-align: right; margin-right: 15px;">KR ETF</div>
-                <div style="text-align: right; margin-right: 18px;">Total</div>
+                <div style="text-align: right;">KR ETF</div>
+                <div style="text-align: right;">Total</div>
                 <div style="text-align: right;">Profit</div>
             </div>
             """
