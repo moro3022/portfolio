@@ -1189,9 +1189,9 @@ if selected_tab == "성과":
         
         monthly_performance_html += '<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">'
         
-        colors = ["#778AD5", "#95a5a6", "#95a5a6"]
+        card_colors = ["#778AD5", "#95a5a6", "#95a5a6"]
         
-        for idx, row in recent_3_months.iterrows():
+        for i, (idx, row) in enumerate(recent_3_months.iterrows()):
             month_str = row["기준일"].strftime("%B %Y")
             
             if idx == recent_3_months.index[0]:
@@ -1208,10 +1208,9 @@ if selected_tab == "성과":
                 mom_change = int(row["손익변동"]) if pd.notna(row["손익변동"]) else 0
             
             sign = "+" if mom_change >= 0 else ""
-            color_idx = min(idx, 2)
             
             monthly_performance_html += f"""
-            <div style="background: {colors[color_idx]}; border-radius: 12px; padding: 20px; color: white;">
+            <div style="background: {card_colors[i]}; border-radius: 12px; padding: 20px; color: white;">
                 <div style="font-size: 13px; opacity: 0.9; margin-bottom: 8px;">{month_str}</div>
                 <div style="font-size: 28px; font-weight: 700; margin-bottom: 16px;">{total_asset:,}</div>
                 <div style="display: flex; align-items: center; gap: 8px;">
