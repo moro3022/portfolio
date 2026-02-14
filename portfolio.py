@@ -1211,11 +1211,11 @@ if selected_tab == "성과":
                         font-size: 12px; font-weight: 600; color: #6c757d; margin-bottom: 8px;">
                 <div>Month</div>
                 <div style="text-align: center;">US Market</div>
-                <div style="text-align: right;">US AI</div>
-                <div style="text-align: right;">US WRAP</div>
-                <div style="text-align: right;">KR Leverage</div>
-                <div style="text-align: right;">KR ETF</div>
-                <div style="text-align: right;">Total</div>
+                <div style="text-align: center;">US AI</div>
+                <div style="text-align: center;">US WRAP</div>
+                <div style="text-align: center;">KR Leverage</div>
+                <div style="text-align: center;">KR ETF</div>
+                <div style="text-align: center;">Total</div>
             </div>
             """
             
