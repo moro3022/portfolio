@@ -555,7 +555,7 @@ elif acct == "성과":
 else:
     df_trade = trade_dfs[acct]
     df_cash = cash_df[cash_df["계좌명"] == acct]
-    df_summary, summary = calculate_account_summary(df_trade, df_cash, df_dividend)
+    df_summary, summary = calculate_account_summary(df_trade, df_cash, df_dividend, price_map)
 
 
 total_profit = summary["current_profit"] + summary["actual_profit"]
