@@ -1099,64 +1099,6 @@ if selected_tab == "성과":
         recent_6_months = pd.DataFrame()
         recent_3_months = pd.DataFrame()
 
-    # --- 당월 신규 매수액 계산 함수 ---
-    def calculate_monthly_purchase(month_date):
-        month_start = month_date.replace(day=1)
-        if month_date.month == 12:
-            month_end = month_date.replace(year=month_date.year + 1, month=1, day=1) - pd.Timedelta(days=1)
-        else:
-            month_end = month_date.replace(month=month_date.month + 1, day=1) - pd.Timedelta(days=1)
-        
-        purchases = {"US Market": 0, "US AI Power": 0, "US WRAP": 0, "KR Leverage": 0, "KR Sector": 0}
-        
-        for acct_name in ["ISA", "Pension", "IRP", "US"]:
-            df_trade = trade_dfs[acct_name]
-            monthly_trades = df_trade[
-                (df_trade["거래일"] >= month_start) & 
-                (df_trade["거래일"] <= month_end) &
-                (df_trade["유형"].isin(["S&P", "나스닥", "TDF"]))
-            ]
-            if not monthly_trades.empty:
-                buy_amt = monthly_trades[monthly_trades["구분"] == "매수"]["거래금액"].sum()
-                sell_amt = monthly_trades[monthly_trades["구분"] == "매도"]["거래금액"].sum()
-                net_amt = buy_amt - sell_amt
-                purchases["US Market"] += net_amt * exchange_rate if acct_name == "US" else net_amt
-        
-        for acct_name in ["ISA", "Pension", "IRP", "US"]:
-            df_trade = trade_dfs[acct_name]
-            monthly_trades = df_trade[
-                (df_trade["거래일"] >= month_start) & 
-                (df_trade["거래일"] <= month_end) &
-                (df_trade["유형"] == "전력")
-            ]
-            if not monthly_trades.empty:
-                buy_amt = monthly_trades[monthly_trades["구분"] == "매수"]["거래금액"].sum()
-                sell_amt = monthly_trades[monthly_trades["구분"] == "매도"]["거래금액"].sum()
-                net_amt = buy_amt - sell_amt
-                purchases["US AI Power"] += net_amt * exchange_rate if acct_name == "US" else net_amt
-        
-        wrap_data = performance_df[
-            (performance_df["기준일"] == month_date) &
-            (performance_df["전략"] == "US Wrap")
-        ]
-        if not wrap_data.empty:
-            wrap_purchase = wrap_data["운용증가"].values[0]
-            purchases["US WRAP"] = wrap_purchase if pd.notna(wrap_purchase) else 0
-        
-        purchases["KR Leverage"] = 0
-        
-        df_trade = trade_dfs["ETF"]
-        monthly_trades = df_trade[
-            (df_trade["거래일"] >= month_start) & 
-            (df_trade["거래일"] <= month_end)
-        ]
-        if not monthly_trades.empty:
-            buy_amt = monthly_trades[monthly_trades["구분"] == "매수"]["거래금액"].sum()
-            sell_amt = monthly_trades[monthly_trades["구분"] == "매도"]["거래금액"].sum()
-            purchases["KR Sector"] = buy_amt - sell_amt
-        
-        return purchases
-
     # --- 인디케이터 함수 ---
     def get_indicator(val):
         """과거월: 시트 월간수익률 기준 (소수 형태, 예: 0.025 = 2.5%)"""
@@ -1236,7 +1178,11 @@ if selected_tab == "성과":
                 current_month_idx = len(latest_dates) - 1
                 prev_month_idx = len(latest_dates) - 2
 
-                monthly_purchases = calculate_monthly_purchase(latest_dates[current_month_idx])
+                wrap_data = performance_df[
+                    (performance_df["기준일"] == latest_dates[current_month_idx]) &
+                    (performance_df["전략"] == "US Wrap")
+                ]
+                us_wrap_purchase = float(wrap_data["운용증가"].values[0]) if not wrap_data.empty and pd.notna(wrap_data["운용증가"].values[0]) else 0
 
                 prev_month_strategies = strategy_monthly[strategy_monthly["기준일"] == latest_dates[prev_month_idx]]
 
@@ -1253,8 +1199,8 @@ if selected_tab == "성과":
                 us_market_mom = strategies[0]["profit"] - prev_us_market_profit
                 us_ai_mom = strategies[1]["profit"] - prev_us_ai_profit
                 kr_sector_mom = strategies[4]["profit"] - prev_kr_sector_profit
-                us_wrap_mom = calc_mom(strategies[2]["value"], prev_us_wrap, monthly_purchases["US WRAP"])
-                kr_leverage_mom = calc_mom(strategies[3]["value"], prev_kr_leverage, monthly_purchases["KR Leverage"])
+                us_wrap_mom = calc_mom(strategies[2]["value"], prev_us_wrap, us_wrap_purchase["US WRAP"])
+                kr_leverage_mom = calc_mom(strategies[3]["value"], prev_kr_leverage, 0)
 
                 total_mom = us_market_mom + us_ai_mom + us_wrap_mom + kr_leverage_mom + kr_sector_mom
             # =====================================================
