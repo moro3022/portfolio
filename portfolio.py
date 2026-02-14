@@ -78,8 +78,26 @@ def get_price_data(code: str, source: str = "fdr"):
     else:
         return yf.download(code, period="5d")
 
+@st.cache_data(ttl=300)
+def get_all_prices(codes: tuple) -> dict:
+    import concurrent.futures
+    
+    def fetch(code):
+        try:
+            data = fdr.DataReader(code)
+            return code, {
+                "current": float(data.iloc[-1]["Close"]),
+                "prev":    float(data.iloc[-2]["Close"])
+            }
+        except:
+            return code, {"current": 0, "prev": 0}
+    
+    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+        results = executor.map(fetch, codes)
+    
+    return dict(results)
 
-def calculate_account_summary(df_trade, df_cash, df_dividend, is_us_stock=False):
+def calculate_account_summary(df_trade, df_cash, df_dividend, price_map, is_us_stock=False):
     summary_list = []
     realized_total = 0
     today_profit = 0
@@ -114,13 +132,9 @@ def calculate_account_summary(df_trade, df_cash, df_dividend, is_us_stock=False)
                     current_price = group["현재가"].dropna().iloc[-1] if "현재가" in group.columns else 0
                     prev_close = current_price
                 else:
-                    try:
-                        price_data = get_price_data(str(code), source="fdr")
-                        current_price = price_data.iloc[-1]["Close"]
-                        prev_close = price_data.iloc[-2]["Close"]
-                    except:
-                        current_price = 0
-                        prev_close = 0
+                    price_info = price_map.get(str(code), {"current": 0, "prev": 0})
+                    current_price = price_info["current"]
+                    prev_close = price_info["prev"]
             except:
                 current_price = 0
                 prev_close = 0
@@ -224,13 +238,9 @@ def calculate_strategy_summary(df_trade, df_cash, df_dividend_filtered, is_us_st
                     current_price = group["현재가"].dropna().iloc[-1] if "현재가" in group.columns else 0
                     prev_close = current_price
                 else:
-                    try:
-                        price_data = get_price_data(str(code), source="fdr")
-                        current_price = price_data.iloc[-1]["Close"]
-                        prev_close = price_data.iloc[-2]["Close"]
-                    except:
-                        current_price = 0
-                        prev_close = 0
+                    price_info = price_map.get(str(code), {"current": 0, "prev": 0})
+                    current_price = price_info["current"]
+                    prev_close = price_info["prev"]
             except:
                 current_price = 0
                 prev_close = 0
@@ -495,7 +505,17 @@ theme_color = ACCOUNT_COLORS.get(selected_tab, "#EDEDE9")
 
 acct = selected_tab
 currency_symbol = "$ " if selected_tab == "US" else ""
-        
+
+# 전체 종목코드 수집
+all_codes = set()
+for acct_name in ["ISA", "Pension", "IRP", "ETF", "US"]:
+    df_t = trade_dfs[acct_name]
+    all_codes.update(df_t["종목코드"].astype(str).unique())
+all_codes.discard("펀드")
+
+# 한 번에 병렬 조회
+price_map = get_all_prices(tuple(all_codes))
+
 local_accounts = ["ISA", "Pension", "IRP", "ETF"]
 local_total_summary = {
     "capital": 0,
@@ -511,7 +531,7 @@ df_summary_list = []
 for acct_name in local_accounts:
     df_trade = trade_dfs[acct_name]
     df_cash = cash_df[cash_df["계좌명"] == acct_name]
-    df_s, s = calculate_account_summary(df_trade, df_cash, df_dividend)
+    df_s, s = calculate_account_summary(df_trade, df_cash, df_dividend, price_map)
     df_summary_list.append(df_s)
     for key in local_total_summary:
         local_total_summary[key] += s[key]
