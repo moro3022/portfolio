@@ -1502,6 +1502,13 @@ if selected_tab == "성과":
 
                 # 당월 신규 매수액
                 monthly_purchases = calculate_monthly_purchase(latest_dates[current_month_idx])
+
+                # ← 여기에 추가
+                st.write("=== KR ETF MoM 디버그 ===")
+                st.write(f"monthly_purchases KR Sector: {monthly_purchases['KR Sector']:,}")
+                st.write(f"strategies[4] value: {strategies[4]['value']:,}")
+                st.write(f"prev_kr_sector: {prev_kr_sector:,}")
+                st.write(f"kr_sector_mom: {strategies[4]['value'] - prev_kr_sector - monthly_purchases['KR Sector']:,}")
                 
                 # 전월 데이터
                 prev_month_strategies = strategy_monthly[strategy_monthly["기준일"] == latest_dates[prev_month_idx]]
