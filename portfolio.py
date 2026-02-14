@@ -1178,70 +1178,27 @@ if selected_tab == "성과":
 
     # --- 통합 카드: 3개월 카드 + 테이블 ---
     if not recent_3_months.empty:
-        monthly_performance_html = '<div class="card" style="margin-top: 24px;">'
-        
-        monthly_performance_html += """
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <div style="font-size: 20px; font-weight: 600; color: #444;">Monthly Performance Detail</div>
-            <div style="font-size: 13px; color: #95a5a6;">Recent 3 months</div>
-        </div>
-        """
-        
-        monthly_performance_html += '<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">'
-        
-        card_colors = ["#778AD5", "#95a5a6", "#95a5a6"]
-        
-        total_mom = 0
 
-        for i, (idx, row) in enumerate(recent_3_months.iterrows()):
-            month_str = row["기준일"].strftime("%B %Y")
-            
-            if idx == recent_3_months.index[0]:
-                total_asset = total_strategy_value
-                mom_change = total_mom
-            else:
-                total_asset = int(row["평가액"])
-                mom_change = int(row["손익변동"]) if pd.notna(row["손익변동"]) else 0
-            
-            sign = "+" if mom_change >= 0 else ""
-            
-            monthly_performance_html += f"""
-            <div style="background: {card_colors[i]}; border-radius: 12px; padding: 20px; color: white;">
-                <div style="font-size: 13px; opacity: 0.9; margin-bottom: 8px;">{month_str}</div>
-                <div style="font-size: 28px; font-weight: 700; margin-bottom: 16px;">{total_asset:,}</div>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <div style="background: rgba(255,255,255,0.2); padding: 4px 10px; border-radius: 6px; font-size: 13px; font-weight: 600;">
-                        {sign}{mom_change:,.0f}
-                    </div>
-                    <div style="font-size: 13px; opacity: 0.9;">MoM</div>
-                </div>
-            </div>
-            """
-        
-        monthly_performance_html += '</div>'
-        monthly_performance_html += '<div style="border-top: 1px solid #e5e5e5; margin: 32px 0;"></div>'
-        
-        if not recent_6_months.empty:
-            strategy_monthly = performance_df[performance_df["전략"] != "Total"].copy()
-            latest_dates = monthly_totals.head(6)["기준일"].tolist()
-            latest_dates.reverse()
-            strategy_monthly = strategy_monthly[strategy_monthly["기준일"].isin(latest_dates)]
+        # =====================================================
+        # MoM 계산 - 카드 루프 전에 미리 계산
+        # =====================================================
+        strategy_monthly = performance_df[performance_df["전략"] != "Total"].copy()
+        latest_dates = monthly_totals.head(6)["기준일"].tolist()
+        latest_dates.reverse()
+        strategy_monthly = strategy_monthly[strategy_monthly["기준일"].isin(latest_dates)]
 
-            # =====================================================
-            # MoM 계산 - 루프 전에 미리 계산
-            # =====================================================
-            us_market_mom = us_ai_mom = us_wrap_mom = kr_leverage_mom = kr_sector_mom = total_mom = 0
+        us_market_mom = us_ai_mom = us_wrap_mom = kr_leverage_mom = kr_sector_mom = total_mom = 0
 
-            if len(latest_dates) >= 2:
-                current_month_idx = len(latest_dates) - 1
-                prev_month_idx = len(latest_dates) - 2
+        if len(latest_dates) >= 2:
+            current_month_idx = len(latest_dates) - 1
+            prev_month_idx = len(latest_dates) - 2
 
-                monthly_purchases = calculate_monthly_purchase(latest_dates[current_month_idx])
+            monthly_purchases = calculate_monthly_purchase(latest_dates[current_month_idx])
 
-                prev_month_strategies = strategy_monthly[strategy_monthly["기준일"] == latest_dates[prev_month_idx]]
+            prev_month_strategies = strategy_monthly[strategy_monthly["기준일"] == latest_dates[prev_month_idx]]
 
-                def calc_mom(current_val, prev_val, purchase):
-                    return current_val - prev_val - purchase
+            def calc_mom(current_val, prev_val, purchase):
+                return current_val - prev_val - purchase
 
                 prev_us_wrap = int(prev_month_strategies[prev_month_strategies["전략"] == "US Wrap"]["평가액"].values[0]) if len(prev_month_strategies[prev_month_strategies["전략"] == "US Wrap"]) > 0 else 0
                 prev_kr_leverage = int(prev_month_strategies[prev_month_strategies["전략"] == "KR Leverage"]["평가액"].values[0]) if len(prev_month_strategies[prev_month_strategies["전략"] == "KR Leverage"]) > 0 else 0
@@ -1257,8 +1214,51 @@ if selected_tab == "성과":
                 kr_leverage_mom = calc_mom(strategies[3]["value"], prev_kr_leverage, monthly_purchases["KR Leverage"])
 
                 total_mom = us_market_mom + us_ai_mom + us_wrap_mom + kr_leverage_mom + kr_sector_mom
-            # =====================================================
+        # =====================================================
 
+        # 카드 HTML 시작
+        monthly_performance_html = '<div class="card" style="margin-top: 24px;">'
+
+        monthly_performance_html += """
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <div style="font-size: 20px; font-weight: 600; color: #444;">Monthly Performance Detail</div>
+            <div style="font-size: 13px; color: #95a5a6;">Recent 3 months</div>
+        </div>
+        """
+
+        monthly_performance_html += '<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">'
+
+        card_colors = ["#778AD5", "#95a5a6", "#95a5a6"]
+
+        for i, (idx, row) in enumerate(recent_3_months.iterrows()):
+            month_str = row["기준일"].strftime("%B %Y")
+
+            if idx == recent_3_months.index[0]:
+                total_asset = total_strategy_value
+                mom_change = total_mom
+            else:
+                total_asset = int(row["평가액"])
+                mom_change = int(row["손익변동"]) if pd.notna(row["손익변동"]) else 0
+
+            sign = "+" if mom_change >= 0 else ""
+
+            monthly_performance_html += f"""
+            <div style="background: {card_colors[i]}; border-radius: 12px; padding: 20px; color: white;">
+                <div style="font-size: 13px; opacity: 0.9; margin-bottom: 8px;">{month_str}</div>
+                <div style="font-size: 28px; font-weight: 700; margin-bottom: 16px;">{total_asset:,}</div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <div style="background: rgba(255,255,255,0.2); padding: 4px 10px; border-radius: 6px; font-size: 13px; font-weight: 600;">
+                        {sign}{mom_change:,.0f}
+                    </div>
+                    <div style="font-size: 13px; opacity: 0.9;">MoM</div>
+                </div>
+            </div>
+            """
+
+        monthly_performance_html += '</div>'
+        monthly_performance_html += '<div style="border-top: 1px solid #e5e5e5; margin: 32px 0;"></div>'
+
+        if not recent_6_months.empty:
             # 테이블 헤더
             monthly_performance_html += """
             <div style="display: grid; grid-template-columns: 100px repeat(6, 1fr);
