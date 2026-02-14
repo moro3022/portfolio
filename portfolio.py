@@ -1442,18 +1442,9 @@ if selected_tab == "성과":
                 
                 # 이전 달과 비교 (인디케이터 표시)
                 def get_indicator(val):
-                    if val > 1:
+                    if val > 0.01:   # 1% = 0.01
                         return ' <span style="color: #3A866A; font-size: 18px;">●</span>'
-                    elif val < -1:
-                        return ' <span style="color: #C54E4A; font-size: 18px;">●</span>'
-                    else:
-                        return ' <span style="color: #95a5a6; font-size: 18px;">●</span>'
-
-                def get_indicator_by_mom(val):
-                    """당월: MoM 절대금액 기준"""
-                    if val > 0:
-                        return ' <span style="color: #3A866A; font-size: 18px;">●</span>'
-                    elif val < 0:
+                    elif val < -0.01:  # -1% = -0.01
                         return ' <span style="color: #C54E4A; font-size: 18px;">●</span>'
                     else:
                         return ' <span style="color: #95a5a6; font-size: 18px;">●</span>'
