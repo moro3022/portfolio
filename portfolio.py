@@ -903,8 +903,8 @@ if selected_tab == "성과":
             if not df_filtered.empty:
                 df_s, s = calculate_strategy_summary(df_filtered, df_cash, dividend_filtered, is_us_stock=(acct_name == "US"))
                 if not df_s.empty:
-                    multiplier = exchange_rate if acct_name == "US" else 1
-                    value += df_s["평가금액"].sum() * multiplier
+                    multiplier = float(exchange_rate) if acct_name == "US" else 1
+                    value += float(df_s["평가금액"].sum()) * multiplier
                     current_profit += df_s["평가손익"].sum() * multiplier
                     buy_cost += df_s["매입금액"].sum() * multiplier
                     actual_profit += s["actual_profit"] * multiplier
