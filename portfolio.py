@@ -984,7 +984,7 @@ if selected_tab == "성과":
     
     df_trade_us = trade_dfs["US"]
     df_cash_us = cash_df[cash_df["계좌명"] == "US"]
-    _, s_us = calculate_account_summary(df_trade_us, df_cash_us, df_dividend, is_us_stock=True)
+    _, s_us = calculate_account_summary(df_trade_us, df_cash_us, df_dividend, price_map, is_us_stock=True)
     us_cash = s_us["cash"] * exchange_rate
     
     try:
