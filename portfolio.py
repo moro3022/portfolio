@@ -940,7 +940,7 @@ if selected_tab == "성과":
     
     df_trade_etf = trade_dfs["ETF"]
     df_cash_etf = cash_df[cash_df["계좌명"] == "ETF"]
-    df_s_etf, s_etf = calculate_account_summary(df_trade_etf, df_cash_etf, df_dividend)
+    df_s_etf, s_etf = calculate_account_summary(df_trade_etf, df_cash_etf, df_dividend, price_map)
     
     etf_value = s_etf["current_value"]
     etf_profit = s_etf["current_profit"] + s_etf["actual_profit"]
