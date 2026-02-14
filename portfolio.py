@@ -1171,13 +1171,6 @@ if selected_tab == "성과":
                 total_mom = us_market_mom + us_ai_mom + us_wrap_mom + kr_leverage_mom + kr_sector_mom
             # =====================================================
 
-            # MoM Change 행
-            def get_mom_color(val):
-                return "#3A866A" if val >= 0 else "#C54E4A"
-            
-            def get_mom_sign(val):
-                return "+" if val >= 0 else ""
-
             monthly_performance_html += '<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">'
             
             card_colors = ["#778AD5", "#95a5a6", "#95a5a6"]
@@ -1217,13 +1210,12 @@ if selected_tab == "성과":
                         padding: 12px 16px; background: #f8f9fa; border-radius: 8px;
                         font-size: 12px; font-weight: 600; color: #6c757d; margin-bottom: 8px;">
                 <div>Month</div>
-                <div style="text-align: right;">US Market</div>
-                <div style="text-align: right;">US AI</div>
-                <div style="text-align: right;">US WRAP</div>
+                <div style="text-align: right; margin-right: 6px;">US Market</div>
+                <div style="text-align: right; margin-right: 24px;">US AI</div>
+                <div style="text-align: right; margin-right: 8px;">US WRAP</div>
                 <div style="text-align: right;">KR Leverage</div>
-                <div style="text-align: right;">KR ETF</div>
-                <div style="text-align: right;">Total</div>
-                <div style="text-align: right;">Profit</div>
+                <div style="text-align: right; margin-right: 15px;">KR ETF</div>
+                <div style="text-align: right; margin-right: 18px;">Total</div>
             </div>
             """
             
@@ -1284,7 +1276,7 @@ if selected_tab == "성과":
                 bg_color = "#fafafa" if idx % 2 == 1 else "transparent"
                 
                 monthly_performance_html += f"""
-                <div style="display: grid; grid-template-columns: 100px repeat(7, 1fr);
+                <div style="display: grid; grid-template-columns: 100px repeat(6, 1fr);
                             padding: 14px 16px; align-items: center; border-bottom: 1px solid #f0f0f0;
                             background: {bg_color};">
                     <div style="font-weight: 600; color: #2C3E50;">{month_str}</div>
@@ -1294,10 +1286,15 @@ if selected_tab == "성과":
                     <div style="text-align: right; font-size: 14px; color: #555;">{kr_leverage_val/1000000:.1f}M{kr_leverage_indicator}</div>
                     <div style="text-align: right; font-size: 14px; color: #555;">{kr_sector_val/1000000:.1f}M{kr_sector_indicator}</div>
                     <div style="text-align: right; font-size: 16px; font-weight: 700; color: #0f2f76;">{total_val/1000000:.1f}M</div>
-                    <div style="text-align: right; font-size: 14px; font-weight: 600; color: {get_mom_color(total_mom)};">{get_mom_sign(total_mom)}{total_mom/1000000:.1f}M</div>
                 </div>
                 """
-        
+            
+            # MoM Change 행
+            def get_mom_color(val):
+                return "#3A866A" if val >= 0 else "#C54E4A"
+            
+            def get_mom_sign(val):
+                return "+" if val >= 0 else ""
             
             invisible_dot = ' <span style="color: #f0f7ff; font-size: 18px;">●</span>'
             
@@ -1311,7 +1308,6 @@ if selected_tab == "성과":
                 <div style="text-align: right; font-size: 14px; font-weight: 600; color: {get_mom_color(kr_leverage_mom)};">{get_mom_sign(kr_leverage_mom)}{kr_leverage_mom/1000000:.1f}M{invisible_dot}</div>
                 <div style="text-align: right; font-size: 14px; font-weight: 600; color: {get_mom_color(kr_sector_mom)};">{get_mom_sign(kr_sector_mom)}{kr_sector_mom/1000000:.1f}M{invisible_dot}</div>
                 <div style="text-align: right; font-size: 16px; font-weight: 700; color: {get_mom_color(total_mom)};">{get_mom_sign(total_mom)}{total_mom/1000000:.1f}M</div>
-                <div></div>
             </div>
             """
         
