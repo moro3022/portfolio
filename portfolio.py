@@ -174,7 +174,6 @@ def calculate_account_summary(df_trade, df_cash, df_dividend, is_us_stock=False)
     cash = total_balance - current_value
     total_profit_rate = (total_balance - capital) / capital * 100 if capital else 0
 
-    # NaN 체크를 추가한 summary 딕셔너리
     summary = {
         "capital": round(capital) if pd.notna(capital) else 0,
         "current_value": round(current_value) if pd.notna(current_value) else 0,
@@ -259,13 +258,11 @@ def calculate_strategy_summary(df_trade, df_cash, df_dividend_filtered, is_us_st
 
     df_summary = pd.DataFrame(summary_list)
 
-    # 배당금 계산 - 필터링된 데이터를 그대로 사용
     dividend_total = 0
     if not df_dividend_filtered.empty:
         dividend_sum = df_dividend_filtered["배당금"].sum()
         dividend_total = dividend_sum if pd.notna(dividend_sum) else 0
 
-    # 빈 DataFrame 처리
     if df_summary.empty:
         current_value = 0
         current_profit = 0
@@ -273,7 +270,6 @@ def calculate_strategy_summary(df_trade, df_cash, df_dividend_filtered, is_us_st
         current_value = df_summary["평가금액"].sum()
         current_profit = df_summary["평가손익"].sum()
 
-    # 계산된 값들의 NaN 처리
     capital = (df_cash[df_cash["구분"] == "입금"]["금액"].sum() - df_cash[df_cash["구분"] == "출금"]["금액"].sum())
     capital = capital if pd.notna(capital) else 0
     
@@ -284,7 +280,6 @@ def calculate_strategy_summary(df_trade, df_cash, df_dividend_filtered, is_us_st
     cash = total_balance - current_value
     total_profit_rate = (total_balance - capital) / capital * 100 if capital else 0
 
-    # NaN 체크를 추가한 summary 딕셔너리
     summary = {
         "capital": round(capital) if pd.notna(capital) else 0,
         "current_value": round(current_value) if pd.notna(current_value) else 0,
@@ -464,7 +459,6 @@ ACCOUNT_NAMES = ["전체", "ISA", "Pension", "IRP", "ETF", "US", "성과"]
 green_color = "#3A866A"
 red_color = "#C54E4A"
 
-# 옵션 메뉴 사용
 selected_tab = option_menu(
     menu_title=None,
     options=ACCOUNT_NAMES,
@@ -489,22 +483,19 @@ selected_tab = option_menu(
 
 ACCOUNT_COLORS = {
     "Overview": "#EDE5D9",
-    "ISA": "#B9CCD9",      # 블루그레이
-    "Pension": "#F6CD7D",  # 머스타드
-    "IRP": "#C8D9A2",      # 올리브
-    "ETF": "#F6C793",      # 살구
-    "전체": "#EDE5D9",      # 기본 회색
+    "ISA": "#B9CCD9",
+    "Pension": "#F6CD7D",
+    "IRP": "#C8D9A2",
+    "ETF": "#F6C793",
+    "전체": "#EDE5D9",
     "US": "#F7B7A3",
 }
 
 theme_color = ACCOUNT_COLORS.get(selected_tab, "#EDEDE9")
 
-# 선택된 계좌에 따라 데이터 처리
 acct = selected_tab
 currency_symbol = "$ " if selected_tab == "US" else ""
         
-# 계좌별 데이터 불러오기
-# --- 항상 실행되는 영역
 local_accounts = ["ISA", "Pension", "IRP", "ETF"]
 local_total_summary = {
     "capital": 0,
@@ -533,7 +524,6 @@ local_total_summary["total_profit_rate"] = (
 local_summary = {k: round(v) if k != "total_profit_rate" else round(v, 2) for k, v in local_total_summary.items()}
 local_total_summary["total_profit"] = local_total_summary["current_profit"] + local_total_summary["actual_profit"]
 
-# 탭 선택에 따른 데이터 분기 설정
 if acct == "전체":
     df_summary = pd.concat(df_summary_list, ignore_index=True)
     summary = local_summary
@@ -548,14 +538,12 @@ else:
     df_summary, summary = calculate_account_summary(df_trade, df_cash, df_dividend)
 
 
-# summary 값 사용
 total_profit = summary["current_profit"] + summary["actual_profit"]
 total_profit_rate = summary["total_profit_rate"]
 today_profit = summary["today_profit"] 
 
 current_profit = summary["current_profit"]
 
-# 빈 DataFrame 체크 추가
 if df_summary.empty:
     buy_cost_total = 0
     current_profit_rate = 0
@@ -575,7 +563,6 @@ capital_ratio = capital / summary["total_balance"] * 100 if summary["total_balan
 
 # --- 레이아웃 시작 ---
     
-# 1. Profit 카드
 icon_book = "https://cdn-icons-png.flaticon.com/128/16542/16542648.png"
 icon_wallet = "https://cdn-icons-png.flaticon.com/128/19011/19011999.png"
 
@@ -605,7 +592,6 @@ card_html_profit = f"""
 </div>
 """
 
-# 2. --- balance 카드 ---
 def get_bar(percent, color="#2E7850"):
     return f"<div style='width:100%; background:#F5F5F5; height:20px; border-radius:5px; margin-top:8px; margin-bottom:12px;'><div style='width:{percent:.1f}%; background:{color}; height:20px; border-radius:5px;'></div></div>"
 
@@ -617,15 +603,12 @@ LIMITS = {
     "IRP": 7200000
 }
 
-# 납입액 계산
 if acct == "ISA":
-    # 전체 기간 누적 입금액
     deposit_df = cash_df[
         (cash_df["계좌명"] == acct) &
         (cash_df["구분"] == "입금")
     ]
 else:
-    # 올해 입금액
     deposit_df = cash_df[
         (cash_df["계좌명"] == acct) &
         (cash_df["구분"] == "입금") &
@@ -639,7 +622,6 @@ paid_ratio = (paid_amount / limit) * 100 if limit > 0 else 0
 
 bar1 = get_bar(operated_ratio, color=theme_color)
 
-# 조건부 추가 HTML
 if acct in ["ISA", "Pension", "IRP"] and limit > 0:
     bar2_html = get_bar(paid_ratio, color=theme_color)
     limit_html = f"""
@@ -660,7 +642,6 @@ else:
 icon_capital = "https://cdn-icons-png.flaticon.com/128/7928/7928113.png"
 icon_cash = "https://cdn-icons-png.flaticon.com/128/13794/13794238.png"
 
-# 항상 완성된 HTML 구조 유지
 card_html_balance = f"""
 <div class="card">
     <div class="card-title"><span style="color:{theme_color};">●</span><span style="margin-left:6px;">Balance</span></div>
@@ -698,13 +679,11 @@ card_html_balance = f"""
 </div>
 """.strip()
     
-# 3. --- Holdings 카드 ---
 icon_today = "https://cdn-icons-png.flaticon.com/128/876/876754.png"
 icon_total = "https://cdn-icons-png.flaticon.com/128/13110/13110858.png"
 
 today_profit_plus = f"{today_profit:,.0f}" if today_profit > 0 else "&nbsp;"
 
-# 상단 수익 요약 카드
 card_html_stock = dedent(f"""
 <div class="card">
     <div class="card-title"><span style= "color: {theme_color}";>●</span><span style="margin-left: 6px;">Holdings</span></div>
@@ -737,7 +716,6 @@ def icon_up(size=16, color=green_color):
 def icon_down(size=16, color=red_color):
     return f"""<svg xmlns="http://www.w3.org/2000/svg" width="{size}" height="{size}" fill="none" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v8"/><path d="m8 12 4 4 4-4"/></svg>"""
 
-# 종목별 수익률 바인딩
 if not df_summary.empty:
     for _, row in df_summary.sort_values("평가금액", ascending=False).iterrows():
         name = row["종목명"]
@@ -795,22 +773,17 @@ else:
     </div>
     """
 
-# IRP 탭 : 종목별 막대 그래프 HTML
 if selected_tab == "IRP":
     df_summary_sorted = df_summary.sort_values("평가금액", ascending=False).copy()
     
-    # TDF 종목들을 합치기
     tdf_mask = df_summary_sorted["종목명"].str.contains("KB온국민TDF2055|TIGER TDF2045", na=False)
     
     if tdf_mask.any():
-        # TDF 종목들의 데이터 합치기
         tdf_rows = df_summary_sorted[tdf_mask]
         tdf_total_value = tdf_rows["평가금액"].sum()
         
-        # TDF 종목들 제거하고 합친 데이터 추가
         df_summary_sorted = df_summary_sorted[~tdf_mask].copy()
         
-        # TDF(안전자산) 행 추가
         tdf_combined_row = pd.DataFrame({
             "종목코드": ["TDF"],
             "종목명": ["TDF(안전자산)"],
@@ -828,19 +801,16 @@ if selected_tab == "IRP":
     
     df_summary_sorted["비중"] = df_summary_sorted["평가금액"] / df_summary_sorted["평가금액"].sum() * 100
 
-    # 색상 리스트
     color_list = ["#375534", "#6B9071", "#aec3b0", "#e3eed4", "#6D6875"]
     total_eval = df_summary_sorted["평가금액"].sum()
     df_summary_sorted["color"] = [color_list[i % len(color_list)] for i in range(len(df_summary_sorted))]
 
-    # 바(segment) 생성
     bar_segments = ""
     for i, row in df_summary_sorted.iterrows():
         percent = row["비중"]
         color = row["color"]
         bar_segments += f'<div style="width:{percent:.2f}%; background-color:{color};"></div>'
 
-    # 범례 생성
     legend_html = ""
     for i, row in df_summary_sorted.iterrows():
         name = row["종목명"]
@@ -865,12 +835,11 @@ if selected_tab == "IRP":
             </div>
     """).strip()
 
-# 마무리 태그
 card_html_stock += "</div>"
 
 
 # ========================================
-# 성과 탭 - 실제 데이터 연결 코드
+# 성과 탭
 # ========================================
 
 def clean_html(html_string):
@@ -878,9 +847,7 @@ def clean_html(html_string):
 
 if selected_tab == "성과":
     
-    # === 전략별 계산 통합 함수 ===
     def calculate_strategy_by_type(type_filter, exchange_rate):
-        """유형별 전략 계산 통합 함수"""
         value = 0
         current_profit = 0
         actual_profit = 0
@@ -890,7 +857,6 @@ if selected_tab == "성과":
             df_trade = trade_dfs[acct_name]
             df_cash = cash_df[cash_df["계좌명"] == acct_name]
             
-            # 거래 필터링
             if isinstance(type_filter, list):
                 mask = df_trade["유형"].isin(type_filter)
                 dividend_mask = df_dividend["유형"].isin(type_filter)
@@ -900,7 +866,6 @@ if selected_tab == "성과":
             
             df_filtered = df_trade[mask]
             
-            # 배당 필터링
             dividend_filtered = df_dividend[
                 (df_dividend["계좌명"] == acct_name) & dividend_mask
             ]
@@ -926,35 +891,23 @@ if selected_tab == "성과":
             "return": round(return_rate, 1)
         }
     
-    # Strategy 1: US Market Index
     strategy_1 = calculate_strategy_by_type(["S&P", "나스닥", "TDF"], exchange_rate)
     us_market_value = strategy_1["value"]
-    us_market_current_profit = strategy_1["current_profit"]
-    us_market_actual_profit = strategy_1["actual_profit"]
-    us_market_buy_cost = strategy_1["buy_cost"]
     us_market_profit = strategy_1["profit"]
     us_market_return = strategy_1["return"]
 
-    # Strategy 2: US AI Power & Grid
     strategy_2 = calculate_strategy_by_type("전력", exchange_rate)
     us_ai_value = strategy_2["value"]
-    us_ai_current_profit = strategy_2["current_profit"]
-    us_ai_actual_profit = strategy_2["actual_profit"]
-    us_ai_buy_cost = strategy_2["buy_cost"]
     us_ai_profit = strategy_2["profit"]
     us_ai_return = strategy_2["return"]
     
-    # Strategy 3: US Managed WRAP
     wrap_value = wrap_value_usd * exchange_rate
     wrap_profit = (wrap_value_usd - wrap_capital_usd) * exchange_rate
     wrap_return = ((wrap_value_usd - wrap_capital_usd) / wrap_capital_usd * 100) if wrap_capital_usd > 0 else 0
     
-    # Strategy 4: KR Index Leverage (LV 탭)
     try:
         lv_df = conn.read(worksheet="LV")
         lv_df.columns = lv_df.columns.str.strip()
-        
-        # 손익 컬럼 합계
         lv_profit = pd.to_numeric(lv_df["손익"], errors="coerce").sum()
         lv_capital = 10000000
         lv_value = lv_profit + lv_capital
@@ -965,7 +918,6 @@ if selected_tab == "성과":
         lv_profit = 0
         lv_return = 0
     
-    # Strategy 5: KR Sector ETFs (ETF 탭)
     df_trade_etf = trade_dfs["ETF"]
     df_cash_etf = cash_df[cash_df["계좌명"] == "ETF"]
     df_s_etf, s_etf = calculate_account_summary(df_trade_etf, df_cash_etf, df_dividend)
@@ -974,56 +926,20 @@ if selected_tab == "성과":
     etf_profit = s_etf["current_profit"] + s_etf["actual_profit"]
     etf_return = s_etf["total_profit_rate"]
  
-    # --- 2. 전략 리스트 생성 ---
     strategies = [
-        {
-            "name": "US Market Index",
-            "value": int(us_market_value),
-            "profit": int(us_market_profit),
-            "rate": round(us_market_return, 1),
-            "color": "#412f95"
-        },
-        {
-            "name": "US AI Power & Grid",
-            "value": int(us_ai_value),
-            "profit": int(us_ai_profit),
-            "rate": round(us_ai_return, 1),
-            "color": "#7875f4"
-        },
-        {
-            "name": "US Managed WRAP",
-            "value": int(wrap_value),
-            "profit": int(wrap_profit),
-            "rate": round(wrap_return, 1),
-            "color": "#ffb601"
-        },
-        {
-            "name": "KR Index Leverage",
-            "value": int(lv_value),
-            "profit": int(lv_profit),
-            "rate": round(lv_return, 1),
-            "color": "#ff7f05"
-        },
-        {
-            "name": "KR Sector ETFs",
-            "value": int(etf_value),
-            "profit": int(etf_profit),
-            "rate": round(etf_return, 1),
-            "color": "#ff76a6"
-        }
+        {"name": "US Market Index",    "value": int(us_market_value), "profit": int(us_market_profit), "rate": round(us_market_return, 1), "color": "#412f95"},
+        {"name": "US AI Power & Grid", "value": int(us_ai_value),     "profit": int(us_ai_profit),     "rate": round(us_ai_return, 1),    "color": "#7875f4"},
+        {"name": "US Managed WRAP",    "value": int(wrap_value),      "profit": int(wrap_profit),      "rate": round(wrap_return, 1),     "color": "#ffb601"},
+        {"name": "KR Index Leverage",  "value": int(lv_value),        "profit": int(lv_profit),        "rate": round(lv_return, 1),       "color": "#ff7f05"},
+        {"name": "KR Sector ETFs",     "value": int(etf_value),       "profit": int(etf_profit),       "rate": round(etf_return, 1),      "color": "#ff76a6"},
     ]
     
-    # 총합 계산
     total_strategy_value = sum(s["value"] for s in strategies)
     total_strategy_profit = sum(s["profit"] for s in strategies)
     
-    # 비중 계산 (value 기준)
     for strategy in strategies:
         strategy["weight"] = round((strategy["value"] / total_strategy_value * 100), 1) if total_strategy_value > 0 else 0
     
-    # --- 3. HTML 생성 ---
-    
-    # 좌측 상단: Total Portfolio Value
     total_portfolio_value = total_strategy_value
     total_profit_ov = total_strategy_profit
     total_profit_rate_ov = round((total_profit_ov / (total_portfolio_value - total_profit_ov) * 100), 1) if (total_portfolio_value - total_profit_ov) > 0 else 0
@@ -1043,22 +959,14 @@ if selected_tab == "성과":
     </div>
     """)
     
-    # 좌측 하단: Asset & Country Allocation (옵션 4 - 실제 데이터)
-    
-    # Stock = 5가지 전략의 Value 총합
     stock_value_ov = total_strategy_value
-    
-    # Cash 계산
-    # 1. 전체 탭(ISA+Pension+IRP+ETF) Cash
     local_cash = local_summary["cash"]
     
-    # 2. US 탭 Cash (달러 -> 원화 환산)
     df_trade_us = trade_dfs["US"]
     df_cash_us = cash_df[cash_df["계좌명"] == "US"]
     _, s_us = calculate_account_summary(df_trade_us, df_cash_us, df_dividend, is_us_stock=True)
     us_cash = s_us["cash"] * exchange_rate
     
-    # 3. 입출금 탭 I1 셀 (별도 현금)
     try:
         separate_cash_df = conn.read(worksheet="입출금", usecols=[8], nrows=1, header=None)
         separate_cash = float(separate_cash_df.iloc[0, 0]) if not separate_cash_df.empty else 0
@@ -1067,18 +975,13 @@ if selected_tab == "성과":
     
     cash_value_ov = local_cash + us_cash + separate_cash
     
-    # Asset Allocation 비중
     total_asset = stock_value_ov + cash_value_ov
     stock_ratio_ov = (stock_value_ov / total_asset * 100) if total_asset > 0 else 0
     cash_ratio_ov = (cash_value_ov / total_asset * 100) if total_asset > 0 else 0
     
-    # US = Strategy 1 + 2 + 3
     us_value = strategies[0]["value"] + strategies[1]["value"] + strategies[2]["value"]
-    
-    # KR = Strategy 4 + 5
     kr_value = strategies[3]["value"] + strategies[4]["value"]
     
-    # Country Allocation 비중
     total_country = us_value + kr_value
     us_ratio = (us_value / total_country * 100) if total_country > 0 else 0
     kr_ratio = (kr_value / total_country * 100) if total_country > 0 else 0
@@ -1086,80 +989,39 @@ if selected_tab == "성과":
     allocation_html = clean_html(f"""
     <div class="card">
         <div class="card-title">Allocation</div>
-        
-        <!-- Asset Allocation -->
         <div style="margin-top: 20px; margin-bottom: 24px;">
-            <div style="font-size: 14px; font-weight: 600; color: #7F8C8D; margin-bottom: 12px; padding-left: 8px;">
-                ASSET ALLOCATION
-            </div>
-            
+            <div style="font-size: 14px; font-weight: 600; color: #7F8C8D; margin-bottom: 12px; padding-left: 8px;">ASSET ALLOCATION</div>
             <div style="display: flex; flex-direction: column; gap: 8px;">
-                <!-- Stock -->
-                <div style="display: grid; grid-template-columns: 80px 1fr auto;
-                            align-items: center; gap: 16px;
-                            background: #f8f9fa; padding: 14px 16px; border-radius: 10px;">
+                <div style="display: grid; grid-template-columns: 80px 1fr auto; align-items: center; gap: 16px; background: #f8f9fa; padding: 14px 16px; border-radius: 10px;">
                     <div style="font-size: 13px; font-weight: 600; color: #555;">Stock</div>
                     <div style="font-size: 18px; font-weight: 700; color: #0f2f76;">{int(stock_value_ov):,}</div>
-                    <div style="background: #778ad5; color: white;
-                                padding: 6px 14px; border-radius: 8px;
-                                font-size: 13px; font-weight: 700; width: 70px; text-align: center;">
-                        {stock_ratio_ov:.1f}%
-                    </div>
+                    <div style="background: #778ad5; color: white; padding: 6px 14px; border-radius: 8px; font-size: 13px; font-weight: 700; width: 70px; text-align: center;">{stock_ratio_ov:.1f}%</div>
                 </div>
-                
-                <!-- Cash -->
-                <div style="display: grid; grid-template-columns: 80px 1fr auto;
-                            align-items: center; gap: 16px;
-                            background: #f8f9fa; padding: 14px 16px; border-radius: 10px;">
+                <div style="display: grid; grid-template-columns: 80px 1fr auto; align-items: center; gap: 16px; background: #f8f9fa; padding: 14px 16px; border-radius: 10px;">
                     <div style="font-size: 13px; font-weight: 600; color: #555;">Cash</div>
                     <div style="font-size: 18px; font-weight: 700; color: #0f2f76;">{int(cash_value_ov):,}</div>
-                    <div style="background: #b2c2ff; color: white;
-                                padding: 6px 14px; border-radius: 8px;
-                                font-size: 13px; font-weight: 700; width: 70px; text-align: center;">
-                        {cash_ratio_ov:.1f}%
-                    </div>
+                    <div style="background: #b2c2ff; color: white; padding: 6px 14px; border-radius: 8px; font-size: 13px; font-weight: 700; width: 70px; text-align: center;">{cash_ratio_ov:.1f}%</div>
                 </div>
             </div>
         </div>
-        
-        <!-- Country Allocation -->
         <div style="margin-top: 24px;">
-            <div style="font-size: 14px; font-weight: 600; color: #7F8C8D; margin-bottom: 12px; padding-left: 8px;">
-                COUNTRY ALLOCATION
-            </div>
-            
+            <div style="font-size: 14px; font-weight: 600; color: #7F8C8D; margin-bottom: 12px; padding-left: 8px;">COUNTRY ALLOCATION</div>
             <div style="display: flex; flex-direction: column; gap: 8px;">
-                <!-- US -->
-                <div style="display: grid; grid-template-columns: 80px 1fr auto;
-                            align-items: center; gap: 16px;
-                            background: #f8f9fa; padding: 14px 16px; border-radius: 10px;">
+                <div style="display: grid; grid-template-columns: 80px 1fr auto; align-items: center; gap: 16px; background: #f8f9fa; padding: 14px 16px; border-radius: 10px;">
                     <div style="font-size: 13px; font-weight: 600; color: #555;">US</div>
                     <div style="font-size: 18px; font-weight: 700; color: #0f2f76;">{int(us_value):,}</div>
-                    <div style="background: #778ad5; color: white;
-                                padding: 6px 14px; border-radius: 8px;
-                                font-size: 13px; font-weight: 700; width: 70px; text-align: center;">
-                        {us_ratio:.1f}%
-                    </div>
+                    <div style="background: #778ad5; color: white; padding: 6px 14px; border-radius: 8px; font-size: 13px; font-weight: 700; width: 70px; text-align: center;">{us_ratio:.1f}%</div>
                 </div>
-                
-                <!-- KR -->
-                <div style="display: grid; grid-template-columns: 80px 1fr auto;
-                            align-items: center; gap: 16px;
-                            background: #f8f9fa; padding: 14px 16px; border-radius: 10px;">
+                <div style="display: grid; grid-template-columns: 80px 1fr auto; align-items: center; gap: 16px; background: #f8f9fa; padding: 14px 16px; border-radius: 10px;">
                     <div style="font-size: 13px; font-weight: 600; color: #555;">KR</div>
                     <div style="font-size: 18px; font-weight: 700; color: #0f2f76;">{int(kr_value):,}</div>
-                    <div style="background: #b2c2ff; color: white;
-                                padding: 6px 14px; border-radius: 8px;
-                                font-size: 13px; font-weight: 700; width: 70px; text-align: center;">
-                        {kr_ratio:.1f}%
-                    </div>
+                    <div style="background: #b2c2ff; color: white; padding: 6px 14px; border-radius: 8px; font-size: 13px; font-weight: 700; width: 70px; text-align: center;">{kr_ratio:.1f}%</div>
                 </div>
             </div>
         </div>
     </div>
     """)
     
-    # 우측: Strategy Performance (최종 디자인 적용)
     strategy_items = ""
     for strategy in strategies:
         strategy_items += f"""
@@ -1169,7 +1031,6 @@ if selected_tab == "성과":
                         transition: background 0.2s ease; cursor: pointer;"
                  onmouseover="this.style.background='#f8f9fa'"
                  onmouseout="this.style.background='transparent'">
-                
                 <div style="position: relative; width: 80px; height: 80px; flex-shrink: 0;">
                     <div style="position: absolute; width: 80px; height: 80px; border-radius: 50%;
                                 background: conic-gradient(from 0deg, {strategy['color']} 0deg {strategy['weight'] * 3.6}deg, #e5e5e5 {strategy['weight'] * 3.6}deg 360deg);"></div>
@@ -1180,22 +1041,15 @@ if selected_tab == "성과":
                         {strategy['weight']}%
                     </div>
                 </div>
-                
                 <div>
-                    <div style="font-size: 15px; font-weight: 600; color: #2C3E50;">
-                        {strategy['name']}
-                    </div>
+                    <div style="font-size: 15px; font-weight: 600; color: #2C3E50;">{strategy['name']}</div>
                 </div>
-                
                 <div style="text-align: right; display: flex; flex-direction: column; gap: 6px;">
-                    <div style="font-size: 17px; font-weight: 600; color: #2C3E50;">
-                        {strategy['value']:,}
-                    </div>
+                    <div style="font-size: 17px; font-weight: 600; color: #2C3E50;">{strategy['value']:,}</div>
                     <div style="font-size: 15px; font-weight: 600; color: {'#3A866A' if strategy['profit'] >= 0 else '#C54E4A'};">
                         {'+' if strategy['profit'] >= 0 else ''}{strategy['profit']:,}
                     </div>
                 </div>
-                
                 <div style="text-align: right;">
                     <div style="background: {strategy['color']}20; color: {strategy['color']};
                                 font-size: 14px; font-weight: 700;
@@ -1209,7 +1063,6 @@ if selected_tab == "성과":
     strategy_html = clean_html(f"""
     <div class="card" style="height: 785px;">
         <div class="card-title">Strategy Performance</div>
-        
         <div style="display: grid; grid-template-columns: 100px 2fr 2fr 1.5fr;
                     padding: 16px 20px; margin-top: 20px;
                     background: #f8f9fa; border-radius: 8px;
@@ -1219,7 +1072,6 @@ if selected_tab == "성과":
             <div style="text-align: center;">Value / Profit</div>
             <div style="text-align: center;">Return</div>
         </div>
-        
         <div style="display: flex; flex-direction: column; gap: 2px; margin-top: 8px;">
             {strategy_items}
         </div>
@@ -1231,7 +1083,6 @@ if selected_tab == "성과":
         performance_df = conn.read(worksheet="성과")
         performance_df.columns = performance_df.columns.str.strip()   
         performance_df["기준일"] = pd.to_datetime(performance_df["기준일"])
-        
         performance_df = performance_df.sort_values("기준일", ascending=False)
         
         monthly_totals = performance_df.groupby("기준일").agg({
@@ -1250,22 +1101,14 @@ if selected_tab == "성과":
 
     # --- 당월 신규 매수액 계산 함수 ---
     def calculate_monthly_purchase(month_date):
-        """당월(month_date) 신규 매수액을 전략별로 계산"""
         month_start = month_date.replace(day=1)
         if month_date.month == 12:
             month_end = month_date.replace(year=month_date.year + 1, month=1, day=1) - pd.Timedelta(days=1)
         else:
             month_end = month_date.replace(month=month_date.month + 1, day=1) - pd.Timedelta(days=1)
         
-        purchases = {
-            "US Market": 0,
-            "US AI Power": 0,
-            "US WRAP": 0,
-            "KR Leverage": 0,
-            "KR Sector": 0
-        }
+        purchases = {"US Market": 0, "US AI Power": 0, "US WRAP": 0, "KR Leverage": 0, "KR Sector": 0}
         
-        # 1. US Market Index (S&P, 나스닥, TDF)
         for acct_name in ["ISA", "Pension", "IRP", "US"]:
             df_trade = trade_dfs[acct_name]
             monthly_trades = df_trade[
@@ -1273,19 +1116,12 @@ if selected_tab == "성과":
                 (df_trade["거래일"] <= month_end) &
                 (df_trade["유형"].isin(["S&P", "나스닥", "TDF"]))
             ]
-            
             if not monthly_trades.empty:
-                # 매수 - 매도
                 buy_amt = monthly_trades[monthly_trades["구분"] == "매수"]["거래금액"].sum()
                 sell_amt = monthly_trades[monthly_trades["구분"] == "매도"]["거래금액"].sum()
                 net_amt = buy_amt - sell_amt
-                
-                if acct_name == "US":
-                    purchases["US Market"] += net_amt * exchange_rate
-                else:
-                    purchases["US Market"] += net_amt
+                purchases["US Market"] += net_amt * exchange_rate if acct_name == "US" else net_amt
         
-        # 2. US AI Power (전력)
         for acct_name in ["ISA", "Pension", "IRP", "US"]:
             df_trade = trade_dfs[acct_name]
             monthly_trades = df_trade[
@@ -1293,18 +1129,12 @@ if selected_tab == "성과":
                 (df_trade["거래일"] <= month_end) &
                 (df_trade["유형"] == "전력")
             ]
-            
             if not monthly_trades.empty:
                 buy_amt = monthly_trades[monthly_trades["구분"] == "매수"]["거래금액"].sum()
                 sell_amt = monthly_trades[monthly_trades["구분"] == "매도"]["거래금액"].sum()
                 net_amt = buy_amt - sell_amt
-                
-                if acct_name == "US":
-                    purchases["US AI Power"] += net_amt * exchange_rate
-                else:
-                    purchases["US AI Power"] += net_amt
+                purchases["US AI Power"] += net_amt * exchange_rate if acct_name == "US" else net_amt
         
-        # 3. US WRAP - 성과 시트에서
         wrap_data = performance_df[
             (performance_df["기준일"] == month_date) &
             (performance_df["전략"] == "US Wrap")
@@ -1313,16 +1143,13 @@ if selected_tab == "성과":
             wrap_purchase = wrap_data["운용증가"].values[0]
             purchases["US WRAP"] = wrap_purchase if pd.notna(wrap_purchase) else 0
         
-        # 4. KR Leverage - 0 (고려 안함)
         purchases["KR Leverage"] = 0
         
-        # 5. KR Sector (ETF 계좌 전체)
         df_trade = trade_dfs["ETF"]
         monthly_trades = df_trade[
             (df_trade["거래일"] >= month_start) & 
             (df_trade["거래일"] <= month_end)
         ]
-        
         if not monthly_trades.empty:
             buy_amt = monthly_trades[monthly_trades["구분"] == "매수"]["거래금액"].sum()
             sell_amt = monthly_trades[monthly_trades["구분"] == "매도"]["거래금액"].sum()
@@ -1330,11 +1157,29 @@ if selected_tab == "성과":
         
         return purchases
 
+    # --- 인디케이터 함수 ---
+    def get_indicator(val):
+        """과거월: 시트 월간수익률 기준 (소수 형태, 예: 0.025 = 2.5%)"""
+        if val > 0.01:
+            return ' <span style="color: #3A866A; font-size: 18px;">●</span>'
+        elif val < -0.01:
+            return ' <span style="color: #C54E4A; font-size: 18px;">●</span>'
+        else:
+            return ' <span style="color: #95a5a6; font-size: 18px;">●</span>'
+
+    def get_indicator_by_mom(val):
+        """당월: MoM 절대금액 기준"""
+        if val > 0:
+            return ' <span style="color: #3A866A; font-size: 18px;">●</span>'
+        elif val < 0:
+            return ' <span style="color: #C54E4A; font-size: 18px;">●</span>'
+        else:
+            return ' <span style="color: #95a5a6; font-size: 18px;">●</span>'
+
     # --- 통합 카드: 3개월 카드 + 테이블 ---
     if not recent_3_months.empty:
         monthly_performance_html = '<div class="card" style="margin-top: 24px;">'
         
-        # 제목
         monthly_performance_html += """
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
             <div style="font-size: 20px; font-weight: 600; color: #444;">Monthly Performance Detail</div>
@@ -1342,7 +1187,6 @@ if selected_tab == "성과":
         </div>
         """
         
-        # 상단: 최근 3개월 카드
         monthly_performance_html += '<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">'
         
         colors = ["#95a5a6", "#95a5a6", "#778AD5"]
@@ -1350,24 +1194,16 @@ if selected_tab == "성과":
         for idx, row in recent_3_months.iterrows():
             month_str = row["기준일"].strftime("%B %Y")
             
-            # 첫 번째(최근) 월만 Strategy Performance에서
             if idx == recent_3_months.index[0]:
                 total_asset = total_strategy_value
-                
-                # MoM 계산: 이전 달이 있으면
                 if len(recent_3_months) > 1:
                     prev_month_value = int(recent_3_months.iloc[1]["평가액"])
-                    
-                    # 당월 신규 매수액 계산
                     monthly_purchases = calculate_monthly_purchase(row["기준일"])
                     total_monthly_purchase = sum(monthly_purchases.values())
-                    
-                    # 순수익 = (당월 - 전월) - 신규 매수액
                     mom_change = total_asset - prev_month_value - total_monthly_purchase
                 else:
                     mom_change = 0
             else:
-                # 나머지는 성과 시트에서
                 total_asset = int(row["평가액"])
                 mom_change = int(row["손익변동"]) if pd.notna(row["손익변동"]) else 0
             
@@ -1375,8 +1211,7 @@ if selected_tab == "성과":
             color_idx = min(idx, 2)
             
             monthly_performance_html += f"""
-            <div style="background: {colors[color_idx]};
-                        border-radius: 12px; padding: 20px; color: white;">
+            <div style="background: {colors[color_idx]}; border-radius: 12px; padding: 20px; color: white;">
                 <div style="font-size: 13px; opacity: 0.9; margin-bottom: 8px;">{month_str}</div>
                 <div style="font-size: 28px; font-weight: 700; margin-bottom: 16px;">{total_asset:,}</div>
                 <div style="display: flex; align-items: center; gap: 8px;">
@@ -1389,17 +1224,46 @@ if selected_tab == "성과":
             """
         
         monthly_performance_html += '</div>'
-        
-        # 구분선
         monthly_performance_html += '<div style="border-top: 1px solid #e5e5e5; margin: 32px 0;"></div>'
         
-        # 하단: 테이블
         if not recent_6_months.empty:
             strategy_monthly = performance_df[performance_df["전략"] != "Total"].copy()
             latest_dates = monthly_totals.head(6)["기준일"].tolist()
             latest_dates.reverse()
             strategy_monthly = strategy_monthly[strategy_monthly["기준일"].isin(latest_dates)]
-            
+
+            # =====================================================
+            # MoM 계산 - 루프 전에 미리 계산
+            # =====================================================
+            us_market_mom = us_ai_mom = us_wrap_mom = kr_leverage_mom = kr_sector_mom = total_mom = 0
+
+            if len(latest_dates) >= 2:
+                current_month_idx = len(latest_dates) - 1
+                prev_month_idx = len(latest_dates) - 2
+
+                monthly_purchases = calculate_monthly_purchase(latest_dates[current_month_idx])
+
+                prev_month_strategies = strategy_monthly[strategy_monthly["기준일"] == latest_dates[prev_month_idx]]
+
+                def calc_mom(current_val, prev_val, purchase):
+                    return current_val - prev_val - purchase
+
+                prev_us_wrap = int(prev_month_strategies[prev_month_strategies["전략"] == "US Wrap"]["평가액"].values[0]) if len(prev_month_strategies[prev_month_strategies["전략"] == "US Wrap"]) > 0 else 0
+                prev_kr_leverage = int(prev_month_strategies[prev_month_strategies["전략"] == "KR Leverage"]["평가액"].values[0]) if len(prev_month_strategies[prev_month_strategies["전략"] == "KR Leverage"]) > 0 else 0
+
+                prev_us_market_profit = int(prev_month_strategies[prev_month_strategies["전략"] == "US Market"]["누적수익"].values[0]) if len(prev_month_strategies[prev_month_strategies["전략"] == "US Market"]) > 0 else 0
+                prev_us_ai_profit = int(prev_month_strategies[prev_month_strategies["전략"] == "US AI Power"]["누적수익"].values[0]) if len(prev_month_strategies[prev_month_strategies["전략"] == "US AI Power"]) > 0 else 0
+                prev_kr_sector_profit = int(prev_month_strategies[prev_month_strategies["전략"] == "KR Sector"]["누적수익"].values[0]) if len(prev_month_strategies[prev_month_strategies["전략"] == "KR Sector"]) > 0 else 0
+
+                us_market_mom = strategies[0]["profit"] - prev_us_market_profit
+                us_ai_mom = strategies[1]["profit"] - prev_us_ai_profit
+                kr_sector_mom = strategies[4]["profit"] - prev_kr_sector_profit
+                us_wrap_mom = calc_mom(strategies[2]["value"], prev_us_wrap, monthly_purchases["US WRAP"])
+                kr_leverage_mom = calc_mom(strategies[3]["value"], prev_kr_leverage, monthly_purchases["KR Leverage"])
+
+                total_mom = us_market_mom + us_ai_mom + us_wrap_mom + kr_leverage_mom + kr_sector_mom
+            # =====================================================
+
             # 테이블 헤더
             monthly_performance_html += """
             <div style="display: grid; grid-template-columns: 100px repeat(6, 1fr);
@@ -1419,16 +1283,24 @@ if selected_tab == "성과":
             for idx, month_date in enumerate(latest_dates):
                 month_str = month_date.strftime("%Y-%m")
                 
-                # 최근월(첫 번째)만 Strategy Performance에서
                 if idx == len(latest_dates) - 1:
+                    # 당월: Strategy Performance 값
                     us_market_val = strategies[0]["value"]
                     us_ai_val = strategies[1]["value"]
                     us_wrap_val = strategies[2]["value"]
                     kr_leverage_val = strategies[3]["value"]
                     kr_sector_val = strategies[4]["value"]
                     total_val = sum(s["value"] for s in strategies)
+
+                    # 당월 인디케이터: MoM 절대금액 기준
+                    us_market_indicator = get_indicator_by_mom(us_market_mom)
+                    us_ai_indicator = get_indicator_by_mom(us_ai_mom)
+                    us_wrap_indicator = get_indicator_by_mom(us_wrap_mom)
+                    kr_leverage_indicator = get_indicator_by_mom(kr_leverage_mom)
+                    kr_sector_indicator = get_indicator_by_mom(kr_sector_mom)
+
                 else:
-                    # 나머지는 성과 시트에서
+                    # 과거월: 성과 시트 값
                     month_strategies = strategy_monthly[strategy_monthly["기준일"] == month_date]
                     
                     us_market_val = int(month_strategies[month_strategies["전략"] == "US Market"]["평가액"].values[0]) if len(month_strategies[month_strategies["전략"] == "US Market"]) > 0 else 0
@@ -1439,35 +1311,27 @@ if selected_tab == "성과":
                     
                     total_row = monthly_totals[monthly_totals["기준일"] == month_date]
                     total_val = int(total_row["평가액"].values[0]) if not total_row.empty else 0
-                
-                # 이전 달과 비교 (인디케이터 표시)
-                def get_indicator(val):
-                    if val > 0.01:   # 1% = 0.01
-                        return ' <span style="color: #3A866A; font-size: 18px;">●</span>'
-                    elif val < -0.01:  # -1% = -0.01
-                        return ' <span style="color: #C54E4A; font-size: 18px;">●</span>'
+
+                    # 과거월 인디케이터: 시트 월간수익률 기준 (첫 번째 월 제외)
+                    if idx > 0:
+                        us_market_rate = float(month_strategies[month_strategies["전략"] == "US Market"]["월간수익률"].values[0]) if len(month_strategies[month_strategies["전략"] == "US Market"]) > 0 else 0
+                        us_ai_rate = float(month_strategies[month_strategies["전략"] == "US AI Power"]["월간수익률"].values[0]) if len(month_strategies[month_strategies["전략"] == "US AI Power"]) > 0 else 0
+                        us_wrap_rate = float(month_strategies[month_strategies["전략"] == "US Wrap"]["월간수익률"].values[0]) if len(month_strategies[month_strategies["전략"] == "US Wrap"]) > 0 else 0
+                        kr_leverage_rate = float(month_strategies[month_strategies["전략"] == "KR Leverage"]["월간수익률"].values[0]) if len(month_strategies[month_strategies["전략"] == "KR Leverage"]) > 0 else 0
+                        kr_sector_rate = float(month_strategies[month_strategies["전략"] == "KR Sector"]["월간수익률"].values[0]) if len(month_strategies[month_strategies["전략"] == "KR Sector"]) > 0 else 0
+
+                        us_market_indicator = get_indicator(us_market_rate)
+                        us_ai_indicator = get_indicator(us_ai_rate)
+                        us_wrap_indicator = get_indicator(us_wrap_rate)
+                        kr_leverage_indicator = get_indicator(kr_leverage_rate)
+                        kr_sector_indicator = get_indicator(kr_sector_rate)
                     else:
-                        return ' <span style="color: #95a5a6; font-size: 18px;">●</span>'
-
-                # 이전 달 데이터 가져오기 (인디케이터용)
-                us_market_indicator = ' <span style="color: #ffffff; font-size: 18px;">●</span>'  # 기본값 회색
-                us_ai_indicator = ' <span style="color: #ffffff; font-size: 18px;">●</span>'
-                us_wrap_indicator = ' <span style="color: #ffffff; font-size: 18px;">●</span>'
-                kr_leverage_indicator = ' <span style="color: #ffffff; font-size: 18px;">●</span>'
-                kr_sector_indicator = ' <span style="color: #ffffff; font-size: 18px;">●</span>'
-
-                if idx > 0:
-                    us_market_rate = float(month_strategies[month_strategies["전략"] == "US Market"]["월간수익률"].values[0]) if len(month_strategies[month_strategies["전략"] == "US Market"]) > 0 else 0
-                    us_ai_rate = float(month_strategies[month_strategies["전략"] == "US AI Power"]["월간수익률"].values[0]) if len(month_strategies[month_strategies["전략"] == "US AI Power"]) > 0 else 0
-                    us_wrap_rate = float(month_strategies[month_strategies["전략"] == "US Wrap"]["월간수익률"].values[0]) if len(month_strategies[month_strategies["전략"] == "US Wrap"]) > 0 else 0
-                    kr_leverage_rate = float(month_strategies[month_strategies["전략"] == "KR Leverage"]["월간수익률"].values[0]) if len(month_strategies[month_strategies["전략"] == "KR Leverage"]) > 0 else 0
-                    kr_sector_rate = float(month_strategies[month_strategies["전략"] == "KR Sector"]["월간수익률"].values[0]) if len(month_strategies[month_strategies["전략"] == "KR Sector"]) > 0 else 0
-
-                    us_market_indicator = get_indicator(us_market_rate)
-                    us_ai_indicator = get_indicator(us_ai_rate)
-                    us_wrap_indicator = get_indicator(us_wrap_rate)
-                    kr_leverage_indicator = get_indicator(kr_leverage_rate)
-                    kr_sector_indicator = get_indicator(kr_sector_rate)
+                        # 가장 첫 번째 과거월은 투명
+                        us_market_indicator = ' <span style="color: #ffffff; font-size: 18px;">●</span>'
+                        us_ai_indicator = ' <span style="color: #ffffff; font-size: 18px;">●</span>'
+                        us_wrap_indicator = ' <span style="color: #ffffff; font-size: 18px;">●</span>'
+                        kr_leverage_indicator = ' <span style="color: #ffffff; font-size: 18px;">●</span>'
+                        kr_sector_indicator = ' <span style="color: #ffffff; font-size: 18px;">●</span>'
                 
                 bg_color = "#fafafa" if idx % 2 == 1 else "transparent"
                 
@@ -1486,73 +1350,32 @@ if selected_tab == "성과":
                 """
             
             # MoM Change 행
-            if len(latest_dates) >= 2:
-                current_month_idx = len(latest_dates) - 1
-                prev_month_idx = len(latest_dates) - 2
-
-                # 당월 신규 매수액
-                monthly_purchases = calculate_monthly_purchase(latest_dates[current_month_idx])
-                
-                # 전월 데이터
-                prev_month_strategies = strategy_monthly[strategy_monthly["기준일"] == latest_dates[prev_month_idx]]
-                prev_month_totals = monthly_totals[monthly_totals["기준일"] == latest_dates[prev_month_idx]]
-                
-                def calc_mom(strategy_name, current_val, prev_val, purchase):
-                    """MoM = (당월 - 전월) - 신규 매수액"""
-                    return current_val - prev_val - purchase
-                
-                # 각 전략별 MoM
-                #1-1. 직전월 평가액 - 구글시트 불러오기
-                prev_us_market = int(prev_month_strategies[prev_month_strategies["전략"] == "US Market"]["평가액"].values[0]) if len(prev_month_strategies[prev_month_strategies["전략"] == "US Market"]) > 0 else 0
-                prev_us_ai = int(prev_month_strategies[prev_month_strategies["전략"] == "US AI Power"]["평가액"].values[0]) if len(prev_month_strategies[prev_month_strategies["전략"] == "US AI Power"]) > 0 else 0
-                prev_us_wrap = int(prev_month_strategies[prev_month_strategies["전략"] == "US Wrap"]["평가액"].values[0]) if len(prev_month_strategies[prev_month_strategies["전략"] == "US Wrap"]) > 0 else 0
-                prev_kr_leverage = int(prev_month_strategies[prev_month_strategies["전략"] == "KR Leverage"]["평가액"].values[0]) if len(prev_month_strategies[prev_month_strategies["전략"] == "KR Leverage"]) > 0 else 0
-                prev_kr_sector = int(prev_month_strategies[prev_month_strategies["전략"] == "KR Sector"]["평가액"].values[0]) if len(prev_month_strategies[prev_month_strategies["전략"] == "KR Sector"]) > 0 else 0
-
-                #1-2. 직전월 누적수익 - 구글시트 불러오기                
-                prev_us_market_profit = int(prev_month_strategies[prev_month_strategies["전략"] == "US Market"]["누적수익"].values[0]) if len(prev_month_strategies[prev_month_strategies["전략"] == "US Market"]) > 0 else 0
-                prev_us_ai_profit = int(prev_month_strategies[prev_month_strategies["전략"] == "US AI Power"]["누적수익"].values[0]) if len(prev_month_strategies[prev_month_strategies["전략"] == "US AI Power"]) > 0 else 0
-                prev_kr_sector_profit = int(prev_month_strategies[prev_month_strategies["전략"] == "KR Sector"]["누적수익"].values[0]) if len(prev_month_strategies[prev_month_strategies["전략"] == "KR Sector"]) > 0 else 0
-                
-                #1-3. MOM = 당월 누적수익 - 직전월 누적수익
-                us_market_mom = strategies[0]["profit"] - prev_us_market_profit
-                us_ai_mom = strategies[1]["profit"] - prev_us_ai_profit
-                kr_sector_mom = strategies[4]["profit"] - prev_kr_sector_profit
-
-                us_wrap_mom = calc_mom("US WRAP", strategies[2]["value"], prev_us_wrap, monthly_purchases["US WRAP"])
-                kr_leverage_mom = calc_mom("KR Leverage", strategies[3]["value"], prev_kr_leverage, monthly_purchases["KR Leverage"])
-                
-                # Total MoM
-                total_mom = us_market_mom + us_ai_mom + us_wrap_mom + kr_leverage_mom + kr_sector_mom
-                
-                def get_mom_color(val):
-                    return "#3A866A" if val >= 0 else "#C54E4A"
-                
-                def get_mom_sign(val):
-                    return "+" if val >= 0 else ""
-                
-                # 투명 동그라미 (정렬용)
-                invisible_dot = ' <span style="color: #f0f7ff; font-size: 18px;">●</span>'
-                
-                monthly_performance_html += f"""
-                <div style="display: grid; grid-template-columns: 100px repeat(6, 1fr);
-                            padding: 14px 16px; align-items: center; background: #f0f7ff; border-radius: 8px; margin-top: 8px;">
-                    <div style="font-weight: 700; color: #0f2f76;">MoM Change</div>
-                    <div style="text-align: right; font-size: 14px; font-weight: 600; color: {get_mom_color(us_market_mom)};">{get_mom_sign(us_market_mom)}{us_market_mom/1000000:.1f}M{invisible_dot}</div>
-                    <div style="text-align: right; font-size: 14px; font-weight: 600; color: {get_mom_color(us_ai_mom)};">{get_mom_sign(us_ai_mom)}{us_ai_mom/1000000:.1f}M{invisible_dot}</div>
-                    <div style="text-align: right; font-size: 14px; font-weight: 600; color: {get_mom_color(us_wrap_mom)};">{get_mom_sign(us_wrap_mom)}{us_wrap_mom/1000000:.1f}M{invisible_dot}</div>
-                    <div style="text-align: right; font-size: 14px; font-weight: 600; color: {get_mom_color(kr_leverage_mom)};">{get_mom_sign(kr_leverage_mom)}{kr_leverage_mom/1000000:.1f}M{invisible_dot}</div>
-                    <div style="text-align: right; font-size: 14px; font-weight: 600; color: {get_mom_color(kr_sector_mom)};">{get_mom_sign(kr_sector_mom)}{kr_sector_mom/1000000:.1f}M{invisible_dot}</div>
-                    <div style="text-align: right; font-size: 16px; font-weight: 700; color: {get_mom_color(total_mom)};">{get_mom_sign(total_mom)}{total_mom/1000000:.1f}M</div>
-                </div>
-                """
+            def get_mom_color(val):
+                return "#3A866A" if val >= 0 else "#C54E4A"
+            
+            def get_mom_sign(val):
+                return "+" if val >= 0 else ""
+            
+            invisible_dot = ' <span style="color: #f0f7ff; font-size: 18px;">●</span>'
+            
+            monthly_performance_html += f"""
+            <div style="display: grid; grid-template-columns: 100px repeat(6, 1fr);
+                        padding: 14px 16px; align-items: center; background: #f0f7ff; border-radius: 8px; margin-top: 8px;">
+                <div style="font-weight: 700; color: #0f2f76;">MoM Change</div>
+                <div style="text-align: right; font-size: 14px; font-weight: 600; color: {get_mom_color(us_market_mom)};">{get_mom_sign(us_market_mom)}{us_market_mom/1000000:.1f}M{invisible_dot}</div>
+                <div style="text-align: right; font-size: 14px; font-weight: 600; color: {get_mom_color(us_ai_mom)};">{get_mom_sign(us_ai_mom)}{us_ai_mom/1000000:.1f}M{invisible_dot}</div>
+                <div style="text-align: right; font-size: 14px; font-weight: 600; color: {get_mom_color(us_wrap_mom)};">{get_mom_sign(us_wrap_mom)}{us_wrap_mom/1000000:.1f}M{invisible_dot}</div>
+                <div style="text-align: right; font-size: 14px; font-weight: 600; color: {get_mom_color(kr_leverage_mom)};">{get_mom_sign(kr_leverage_mom)}{kr_leverage_mom/1000000:.1f}M{invisible_dot}</div>
+                <div style="text-align: right; font-size: 14px; font-weight: 600; color: {get_mom_color(kr_sector_mom)};">{get_mom_sign(kr_sector_mom)}{kr_sector_mom/1000000:.1f}M{invisible_dot}</div>
+                <div style="text-align: right; font-size: 16px; font-weight: 700; color: {get_mom_color(total_mom)};">{get_mom_sign(total_mom)}{total_mom/1000000:.1f}M</div>
+            </div>
+            """
         
         monthly_performance_html += '</div>'
         monthly_performance_html = clean_html(monthly_performance_html)
     else:
         monthly_performance_html = ""
 
-    # 레이아웃
     col_left, col_right = st.columns([1, 1.3])
     with col_left:
         st.markdown(total_value_html, unsafe_allow_html=True)
@@ -1560,12 +1383,10 @@ if selected_tab == "성과":
     with col_right:
         st.markdown(strategy_html, unsafe_allow_html=True)
 
-    # 월간 성과 표시
     if monthly_performance_html:
         st.markdown(monthly_performance_html, unsafe_allow_html=True)
 
 else:
-    # 기존 레이아웃 (그대로 유지)
     with st.container():
         col_left, col_right = st.columns([1, 1.2])
         with col_left:
@@ -1573,4 +1394,3 @@ else:
             st.markdown(card_html_balance, unsafe_allow_html=True)
         with col_right:
             st.markdown(card_html_stock, unsafe_allow_html=True)
-
