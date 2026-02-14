@@ -913,11 +913,11 @@ if selected_tab == "성과":
         return_rate = (profit / buy_cost * 100) if buy_cost > 0 else 0
         
         return {
-            "value": int(value),
-            "current_profit": int(current_profit),
-            "actual_profit": int(actual_profit),
-            "buy_cost": int(buy_cost),
-            "profit": int(profit),
+            "value": int(value) if pd.notna(value) else 0,
+            "current_profit": int(current_profit) if pd.notna(current_profit) else 0,
+            "actual_profit": int(actual_profit) if pd.notna(actual_profit) else 0,
+            "buy_cost": int(buy_cost) if pd.notna(buy_cost) else 0,
+            "profit": int(profit) if pd.notna(profit) else 0,
             "return": round(return_rate, 1)
         }
     
