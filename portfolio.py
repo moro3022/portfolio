@@ -1191,6 +1191,8 @@ if selected_tab == "성과":
         
         card_colors = ["#778AD5", "#95a5a6", "#95a5a6"]
         
+        total_mom = 0
+
         for i, (idx, row) in enumerate(recent_3_months.iterrows()):
             month_str = row["기준일"].strftime("%B %Y")
             
