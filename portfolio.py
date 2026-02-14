@@ -13,37 +13,25 @@ ACCOUNT_NAMES = ["ISA", "Pension", "IRP", "ETF", "US", "사주", "LV"]
 # --- 엑셀 파일 경로 설정 ---
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-@st.cache_data(ttl=300)
-def load_all_sheets():
-    import concurrent.futures
-    
-    sheet_names = ["입출금", "ISA", "Pension", "IRP", "ETF", "US", "사주", "배당", "WRAP", "성과", "LV"]
-    
-    def read_sheet(name):
-        return name, conn.read(worksheet=name)
-    
-    with concurrent.futures.ThreadPoolExecutor() as executor:
-        results = executor.map(read_sheet, sheet_names)
-    
-    return dict(results)
-
-sheets = load_all_sheets()
-wrap_df = sheets["WRAP"] 
 
 # --- 데이터 불러오기 ---
 try:
     # 입출금 시트
-    cash_df     = sheets["입출금"]
+    cash_df = conn.read(worksheet="입출금")
     cash_df.columns = cash_df.columns.str.strip()
     cash_df["거래일"] = pd.to_datetime(cash_df["거래일"])
 
     # WRAP 시트에서 환율(O열, 첫 번째 행) 읽기
-    exchange_rate    = float(wrap_df.iloc[0, 14]) if (not wrap_df.empty and pd.notna(wrap_df.iloc[0, 14])) else 1400
+    exchange_rate_df = conn.read(worksheet="WRAP", usecols=[14], nrows=1, header=None)
+    exchange_rate = float(exchange_rate_df.iloc[0, 0]) if not exchange_rate_df.empty else 1400
 
     # 각 계좌 시트 불러오기
     TRADE_SHEET_NAMES = [name for name in ACCOUNT_NAMES if name not in ["LV"]]
 
-    trade_dfs   = { acct: sheets[acct] for acct in TRADE_SHEET_NAMES }
+    trade_dfs = {
+        acct: conn.read(worksheet=acct)
+        for acct in TRADE_SHEET_NAMES
+    }
     for acct, df in trade_dfs.items():
         df.columns = df.columns.str.strip()
 
@@ -64,13 +52,16 @@ try:
             df["유형"] = "미분류"
 
     # 배당 시트 불러오기
-    df_dividend = sheets["배당"]
+    df_dividend = conn.read(worksheet="배당")
     df_dividend.columns = df_dividend.columns.str.strip()
     df_dividend["배당금"] = pd.to_numeric(df_dividend["배당금"], errors="coerce").fillna(0).astype(int)
 
     # WRAP 시트에서 K1(원금), M1(평가액) 셀 읽기
-    wrap_capital_usd = float(wrap_df.iloc[0, 10]) if (not wrap_df.empty and pd.notna(wrap_df.iloc[0, 10])) else 0
-    wrap_value_usd   = float(wrap_df.iloc[0, 12]) if (not wrap_df.empty and pd.notna(wrap_df.iloc[0, 12])) else 0
+    wrap_capital_df = conn.read(worksheet="WRAP", usecols=[10], nrows=1, header=None)
+    wrap_capital_usd = float(wrap_capital_df.iloc[0, 0]) if not wrap_capital_df.empty else 0
+
+    wrap_value_df = conn.read(worksheet="WRAP", usecols=[12], nrows=1, header=None)
+    wrap_value_usd = float(wrap_value_df.iloc[0, 0]) if not wrap_value_df.empty else 0
 
     # 원화 환산
     wrap_capital = wrap_capital_usd * exchange_rate
@@ -903,8 +894,8 @@ if selected_tab == "성과":
             if not df_filtered.empty:
                 df_s, s = calculate_strategy_summary(df_filtered, df_cash, dividend_filtered, is_us_stock=(acct_name == "US"))
                 if not df_s.empty:
-                    multiplier = float(exchange_rate) if acct_name == "US" else 1
-                    value += float(df_s["평가금액"].sum()) * multiplier
+                    multiplier = exchange_rate if acct_name == "US" else 1
+                    value += df_s["평가금액"].sum() * multiplier
                     current_profit += df_s["평가손익"].sum() * multiplier
                     buy_cost += df_s["매입금액"].sum() * multiplier
                     actual_profit += s["actual_profit"] * multiplier
@@ -913,11 +904,11 @@ if selected_tab == "성과":
         return_rate = (profit / buy_cost * 100) if buy_cost > 0 else 0
         
         return {
-            "value": int(value) if pd.notna(value) else 0,
-            "current_profit": int(current_profit) if pd.notna(current_profit) else 0,
-            "actual_profit": int(actual_profit) if pd.notna(actual_profit) else 0,
-            "buy_cost": int(buy_cost) if pd.notna(buy_cost) else 0,
-            "profit": int(profit) if pd.notna(profit) else 0,
+            "value": int(value),
+            "current_profit": int(current_profit),
+            "actual_profit": int(actual_profit),
+            "buy_cost": int(buy_cost),
+            "profit": int(profit),
             "return": round(return_rate, 1)
         }
     
@@ -936,7 +927,7 @@ if selected_tab == "성과":
     wrap_return = ((wrap_value_usd - wrap_capital_usd) / wrap_capital_usd * 100) if wrap_capital_usd > 0 else 0
     
     try:
-        lv_df = sheets["LV"]
+        lv_df = conn.read(worksheet="LV")
         lv_df.columns = lv_df.columns.str.strip()
         lv_profit = pd.to_numeric(lv_df["손익"], errors="coerce").sum()
         lv_capital = 10000000
@@ -998,7 +989,8 @@ if selected_tab == "성과":
     us_cash = s_us["cash"] * exchange_rate
     
     try:
-        separate_cash = float(sheets["입출금"].iloc[0, 8]) if not sheets["입출금"].empty else 0
+        separate_cash_df = conn.read(worksheet="입출금", usecols=[8], nrows=1, header=None)
+        separate_cash = float(separate_cash_df.iloc[0, 0]) if not separate_cash_df.empty else 0
     except:
         separate_cash = 0
     
@@ -1109,7 +1101,7 @@ if selected_tab == "성과":
 
     # --- 월간 성과 데이터 불러오기 ---
     try:
-        performance_df = sheets["성과"]
+        performance_df = conn.read(worksheet="성과")
         performance_df.columns = performance_df.columns.str.strip()   
         performance_df["기준일"] = pd.to_datetime(performance_df["기준일"])
         performance_df = performance_df.sort_values("기준일", ascending=False)
