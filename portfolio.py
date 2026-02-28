@@ -1170,7 +1170,7 @@ if selected_tab == "성과":
                 def calc_mom(current_val, prev_val, purchase):
                     return current_val - prev_val - purchase
 
-                prev_us_wrap = int(prev_month_strategies[prev_month_strategies["전략"] == "US Wrap"]["평가액"].values[0]) if len(prev_month_strategies[prev_month_strategies["전략"] == "US Wrap"]) > 0 else 0
+                prev_us_wrap_profit = int(prev_month_strategies[prev_month_strategies["전략"] == "US Wrap"]["누적수익"].values[0]) if len(prev_month_strategies[prev_month_strategies["전략"] == "US Wrap"]) > 0 else 0
                 prev_kr_leverage = int(prev_month_strategies[prev_month_strategies["전략"] == "KR Leverage"]["평가액"].values[0]) if len(prev_month_strategies[prev_month_strategies["전략"] == "KR Leverage"]) > 0 else 0
 
                 prev_us_market_profit = int(prev_month_strategies[prev_month_strategies["전략"] == "US Market"]["누적수익"].values[0]) if len(prev_month_strategies[prev_month_strategies["전략"] == "US Market"]) > 0 else 0
@@ -1186,7 +1186,7 @@ if selected_tab == "성과":
                 us_market_mom = strategies[0]["profit"] - prev_us_market_profit
                 us_ai_mom = strategies[1]["profit"] - prev_us_ai_profit
                 kr_sector_mom = strategies[4]["profit"] - prev_kr_sector_profit
-                us_wrap_mom = calc_mom(strategies[2]["value"], prev_us_wrap, us_wrap_purchase)
+                us_wrap_mom = strategies[2]["profit"] - prev_us_wrap_profit
                 kr_leverage_mom = calc_mom(strategies[3]["value"], prev_kr_leverage, 0)
 
                 total_mom = us_market_mom + us_ai_mom + us_wrap_mom + kr_leverage_mom + kr_sector_mom
