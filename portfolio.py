@@ -112,25 +112,32 @@ def get_price_data(code: str, source: str = "fdr"):
         return yf.download(code, period="5d")
 
 @st.cache_data(ttl=300)
-def get_all_prices(codes: tuple, ref_date: pd.Timestamp = None) -> dict:
+def get_all_prices(codes: tuple, us_codes: tuple, ref_date: pd.Timestamp = None) -> dict:
     import concurrent.futures
 
     def fetch(code):
         try:
-            if ref_date and (pd.Timestamp(datetime.now().date()) - ref_date).days > 1:
-                # 기준일 종가 조회
-                start = ref_date - timedelta(days=10)
-                data = fdr.DataReader(code, start=start, end=ref_date)
-                if data.empty:
-                    return code, {"current": 0, "prev": 0}
-                current = float(data.iloc[-1]["Close"])
-                prev = float(data.iloc[-2]["Close"]) if len(data) >= 2 else current
+            is_us = code in us_codes
+            is_past = ref_date and (pd.Timestamp(datetime.now().date()) - ref_date).days > 1
+
+            if is_us:
+                ticker = yf.Ticker(code)
+                if is_past:
+                    start = ref_date - timedelta(days=10)
+                    data = ticker.history(start=start, end=ref_date + timedelta(days=1))
+                else:
+                    data = ticker.history(period="5d")
             else:
-                data = fdr.DataReader(code)
-                if data.empty:
-                    return code, {"current": 0, "prev": 0}
-                current = float(data.iloc[-1]["Close"])
-                prev = float(data.iloc[-2]["Close"]) if len(data) >= 2 else current
+                if is_past:
+                    start = ref_date - timedelta(days=10)
+                    data = fdr.DataReader(code, start=start, end=ref_date)
+                else:
+                    data = fdr.DataReader(code)
+
+            if data.empty:
+                return code, {"current": 0, "prev": 0}
+            current = float(data["Close"].iloc[-1])
+            prev = float(data["Close"].iloc[-2]) if len(data) >= 2 else current
             return code, {"current": current, "prev": prev}
         except:
             return code, {"current": 0, "prev": 0}
@@ -549,10 +556,15 @@ currency_symbol = "$ " if selected_tab == "US" else ""
 
 # 전체 종목코드 수집
 all_codes = set()
+us_codes = set()  # 추가
 for acct_name in ["ISA", "Pension", "IRP", "ETF", "US"]:
     df_t = trade_dfs[acct_name]
-    all_codes.update(df_t["종목코드"].astype(str).unique())
+    codes = df_t["종목코드"].astype(str).unique()
+    all_codes.update(codes)
+    if acct_name == "US":
+        us_codes.update(codes)  # 추가
 all_codes.discard("펀드")
+us_codes.discard("펀드")
 
 # 기준일 필터링
 if is_historical:
@@ -565,7 +577,7 @@ if is_historical:
         if "배당일" in df_dividend.columns else df_dividend
 
 # 한 번에 병렬 조회
-price_map = get_all_prices(tuple(all_codes), ref_date=ref_date if is_historical else None)
+price_map = get_all_prices(tuple(all_codes), tuple(us_codes), ref_date=ref_date if is_historical else None)
 
 local_accounts = ["ISA", "Pension", "IRP", "ETF"]
 local_total_summary = {
@@ -968,6 +980,16 @@ if selected_tab == "성과":
     us_market_return = strategy_1["return"]
 
     strategy_2 = calculate_strategy_by_type("전력", exchange_rate)
+
+    # 종목별 상세
+    for acct_name in ["ISA", "Pension", "IRP", "US"]:
+        df_trade = trade_dfs[acct_name]
+        mask = df_trade["유형"] == "전력"
+        df_filtered = df_trade[mask]
+        if not df_filtered.empty:
+            st.write(f"--- {acct_name} 전력 종목 ---")
+            st.write(df_filtered[["거래일", "종목명", "구분", "수량", "단가", "거래금액"]])
+
     us_ai_value = strategy_2["value"]
     us_ai_profit = strategy_2["profit"]
     us_ai_return = strategy_2["return"]
