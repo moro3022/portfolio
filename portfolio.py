@@ -15,7 +15,7 @@ ACCOUNT_NAMES = ["ISA", "Pension", "IRP", "ETF", "US", "사주", "LV"]
 # 예시: REFERENCE_DATE = "2026-02-28"
 # ============================================================
 
-REFERENCE_DATE = "2026-02-28"  # None or "YYYY-MM-DD"
+REFERENCE_DATE = "2026-01-31"  # None or "YYYY-MM-DD"
 
 # 기준일 파싱
 if REFERENCE_DATE:
