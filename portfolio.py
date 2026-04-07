@@ -15,7 +15,7 @@ ACCOUNT_NAMES = ["ISA", "Pension", "IRP", "ETF", "US", "사주", "LV"]
 # 예시: REFERENCE_DATE = "2026-02-28"
 # ============================================================
 
-REFERENCE_DATE = "2026-03-31"  # None or "YYYY-MM-DD"
+REFERENCE_DATE = "2026-02-28"  # None or "YYYY-MM-DD"
 
 # 기준일 파싱
 if REFERENCE_DATE:
@@ -1018,7 +1018,7 @@ if selected_tab == "성과":
     total_profit_rate_ov = round((total_profit_ov / (total_portfolio_value - total_profit_ov) * 100), 1) if (total_portfolio_value - total_profit_ov) > 0 else 0
     
     ref_label = f" ({REFERENCE_DATE} 기준)" if is_historical else ""
-    
+
     total_value_html = clean_html(f"""
     <div class="total-value-card">
         <div class="total-value-title">Total Portfolio Value{ref_label}</div>
