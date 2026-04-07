@@ -915,13 +915,6 @@ def clean_html(html_string):
     return ''.join(line.strip() for line in html_string.splitlines())
 
 if selected_tab == "성과":
-
-    # 디버깅 (확인 후 삭제)
-    st.write("=== 거래내역 기준일 필터링 확인 ===")
-    for acct_name in ["ISA", "Pension", "IRP", "US"]:
-        df_t = trade_dfs[acct_name]
-        if not df_t.empty:
-            st.write(f"{acct_name}: {df_t['거래일'].min().date()} ~ {df_t['거래일'].max().date()} ({len(df_t)}건)")
     
     def calculate_strategy_by_type(type_filter, exchange_rate):
         value = 0
