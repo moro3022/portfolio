@@ -53,6 +53,15 @@ try:
     else:
         exchange_rate = exchange_rate_sheet
 
+
+    # 디버깅 (확인 후 삭제)
+    st.write(f"📅 ref_date: {ref_date}")
+    st.write(f"💱 exchange_rate_sheet (WRAP셀): {exchange_rate_sheet}")
+    st.write(f"💱 exchange_rate (실제 사용값): {exchange_rate}")
+    if is_historical:
+        st.write(f"📊 fx_data tail:")
+        st.write(fx_data.tail(3))
+
     # 각 계좌 시트 불러오기
     TRADE_SHEET_NAMES = [name for name in ACCOUNT_NAMES if name not in ["LV"]]
 
