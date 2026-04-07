@@ -980,16 +980,7 @@ if selected_tab == "성과":
     us_market_return = strategy_1["return"]
 
     strategy_2 = calculate_strategy_by_type("전력", exchange_rate)
-
-    # 종목별 상세
-    for acct_name in ["ISA", "Pension", "IRP", "US"]:
-        df_trade = trade_dfs[acct_name]
-        mask = df_trade["유형"] == "전력"
-        df_filtered = df_trade[mask]
-        if not df_filtered.empty:
-            st.write(f"--- {acct_name} 전력 종목 ---")
-            st.write(df_filtered[["거래일", "종목명", "구분", "수량", "단가", "거래금액"]])
-
+    
     us_ai_value = strategy_2["value"]
     us_ai_profit = strategy_2["profit"]
     us_ai_return = strategy_2["return"]
