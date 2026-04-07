@@ -15,7 +15,7 @@ ACCOUNT_NAMES = ["ISA", "Pension", "IRP", "ETF", "US", "사주", "LV"]
 # 예시: REFERENCE_DATE = "2026-02-28"
 # ============================================================
 
-REFERENCE_DATE = "2026-01-31"  # None or "YYYY-MM-DD"
+REFERENCE_DATE = "2026-02-27"  # None or "YYYY-MM-DD"
 
 # 기준일 파싱
 if REFERENCE_DATE:
@@ -52,15 +52,6 @@ try:
             exchange_rate = exchange_rate_sheet
     else:
         exchange_rate = exchange_rate_sheet
-
-
-    # 디버깅 (확인 후 삭제)
-    st.write(f"📅 ref_date: {ref_date}")
-    st.write(f"💱 exchange_rate_sheet (WRAP셀): {exchange_rate_sheet}")
-    st.write(f"💱 exchange_rate (실제 사용값): {exchange_rate}")
-    if is_historical:
-        st.write(f"📊 fx_data tail:")
-        st.write(fx_data.tail(3))
 
     # 각 계좌 시트 불러오기
     TRADE_SHEET_NAMES = [name for name in ACCOUNT_NAMES if name not in ["LV"]]
@@ -924,6 +915,13 @@ def clean_html(html_string):
     return ''.join(line.strip() for line in html_string.splitlines())
 
 if selected_tab == "성과":
+
+    # 디버깅 (확인 후 삭제)
+    st.write("=== 거래내역 기준일 필터링 확인 ===")
+    for acct_name in ["ISA", "Pension", "IRP", "US"]:
+        df_t = trade_dfs[acct_name]
+        if not df_t.empty:
+            st.write(f"{acct_name}: {df_t['거래일'].min().date()} ~ {df_t['거래일'].max().date()} ({len(df_t)}건)")
     
     def calculate_strategy_by_type(type_filter, exchange_rate):
         value = 0
