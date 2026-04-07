@@ -981,7 +981,7 @@ if selected_tab == "성과":
         if is_historical:
             lv_df = lv_df[lv_df["거래일"] <= ref_date]
         lv_profit = pd.to_numeric(lv_df["손익"], errors="coerce").sum()
-        
+
         lv_capital = 10000000
         lv_value = lv_profit + lv_capital
         lv_return = (lv_profit / lv_capital * 100) if lv_capital > 0 else 0
@@ -1017,9 +1017,11 @@ if selected_tab == "성과":
     total_profit_ov = total_strategy_profit
     total_profit_rate_ov = round((total_profit_ov / (total_portfolio_value - total_profit_ov) * 100), 1) if (total_portfolio_value - total_profit_ov) > 0 else 0
     
+    ref_label = f" ({REFERENCE_DATE} 기준)" if is_historical else ""
+    
     total_value_html = clean_html(f"""
     <div class="total-value-card">
-        <div class="total-value-title">Total Portfolio Value</div>
+        <div class="total-value-title">Total Portfolio Value{ref_label}</div>
         <div class="total-value-amount">{total_portfolio_value:,}</div>
         <div class="value-divider"></div>
         <div class="profit-section">
