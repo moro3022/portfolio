@@ -9,6 +9,7 @@ from textwrap import dedent
 
 # --- 기본 설정 ---
 ACCOUNT_NAMES = ["ISA", "Pension", "IRP", "ETF", "US", "사주", "LV"]
+SNAPSHOT_DATE = "2026-03-31"  # None이면 현재가 기준, "YYYY-MM-DD" 형식으로 입력
 
 # --- 엑셀 파일 경로 설정 ---
 conn = st.connection("gsheets", type=GSheetsConnection)
@@ -96,6 +97,44 @@ def get_all_prices(codes: tuple) -> dict:
     with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
         results = executor.map(fetch, codes)
     
+    return dict(results)
+
+@st.cache_data(ttl=300)
+def get_price_at_date(code: str, date_str: str, is_us: bool = False) -> dict:
+    """기준일 종가 조회 (주말/공휴일이면 직전 거래일 기준)"""
+    try:
+        target = pd.Timestamp(date_str)
+        start = (target - timedelta(days=10)).strftime("%Y-%m-%d")
+        end = target.strftime("%Y-%m-%d")
+        
+        if is_us:
+            df = yf.download(code, start=start, end=(target + timedelta(days=1)).strftime("%Y-%m-%d"), progress=False)
+            if df.empty:
+                return {"current": 0, "prev": 0}
+            price = float(df["Close"].iloc[-1])
+        else:
+            df = fdr.DataReader(code, start=start, end=end)
+            if df.empty:
+                return {"current": 0, "prev": 0}
+            price = float(df["Close"].iloc[-1])
+        
+        return {"current": price, "prev": price}
+    except:
+        return {"current": 0, "prev": 0}
+
+@st.cache_data(ttl=300)
+def get_all_prices_at_date(codes: tuple, date_str: str, us_codes: tuple = ()) -> dict:
+    """기준일 기준 병렬 종가 조회"""
+    import concurrent.futures
+
+    def fetch(code):
+        is_us = code in us_codes
+        result = get_price_at_date(code, date_str, is_us=is_us)
+        return code, result
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+        results = executor.map(fetch, codes)
+
     return dict(results)
 
 def calculate_account_summary(df_trade, df_cash, df_dividend, price_map, is_us_stock=False):
@@ -509,13 +548,39 @@ currency_symbol = "$ " if selected_tab == "US" else ""
 
 # 전체 종목코드 수집
 all_codes = set()
+us_codes = set()
 for acct_name in ["ISA", "Pension", "IRP", "ETF", "US"]:
     df_t = trade_dfs[acct_name]
-    all_codes.update(df_t["종목코드"].astype(str).unique())
+    codes = set(df_t["종목코드"].astype(str).unique())
+    all_codes.update(codes)
+    if acct_name == "US":
+        us_codes.update(codes)
 all_codes.discard("펀드")
+us_codes.discard("펀드")
 
-# 한 번에 병렬 조회
-price_map = get_all_prices(tuple(all_codes))
+# WRAP 종목코드 추가
+try:
+    wrap_trade_df = conn.read(worksheet="WRAP")
+    wrap_trade_df.columns = wrap_trade_df.columns.str.strip()
+    wrap_trade_df["거래일"] = pd.to_datetime(wrap_trade_df["거래일"])
+    wrap_trade_df["제세금"] = pd.to_numeric(wrap_trade_df["제세금"], errors="coerce").fillna(0)
+    wrap_trade_df["단가"] = pd.to_numeric(wrap_trade_df["단가"], errors="coerce").fillna(0)
+    wrap_trade_df["수량"] = pd.to_numeric(wrap_trade_df["수량"], errors="coerce").fillna(0)
+    wrap_trade_df["거래금액"] = pd.to_numeric(wrap_trade_df["거래금액"], errors="coerce").fillna(0)
+    wrap_codes = set(wrap_trade_df["종목코드"].astype(str).unique()) - {"펀드"}
+    all_codes.update(wrap_codes)
+    us_codes.update(wrap_codes)  # WRAP은 전부 미국 주식
+except Exception as e:
+    st.warning(f"WRAP 거래내역 로드 실패: {e}")
+    wrap_trade_df = pd.DataFrame()
+    wrap_codes = set()
+
+# 기준일 여부에 따라 price_map 생성
+if SNAPSHOT_DATE:
+    price_map = get_all_prices_at_date(tuple(all_codes), SNAPSHOT_DATE, us_codes=tuple(us_codes))
+else:
+    price_map = get_all_prices(tuple(all_codes))
+
 
 local_accounts = ["ISA", "Pension", "IRP", "ETF"]
 local_total_summary = {
@@ -867,8 +932,24 @@ def clean_html(html_string):
     return ''.join(line.strip() for line in html_string.splitlines())
 
 if selected_tab == "성과":
+
+    if SNAPSHOT_DATE:
+        snapshot_ts = pd.Timestamp(SNAPSHOT_DATE)
+        filtered_trade_dfs = {
+            acct_name: df[df["거래일"] <= snapshot_ts]
+            for acct_name, df in trade_dfs.items()
+        }
+        filtered_wrap_trade_df = wrap_trade_df[wrap_trade_df["거래일"] <= snapshot_ts] if not wrap_trade_df.empty else pd.DataFrame()
+        filtered_cash_df = cash_df[cash_df["거래일"] <= snapshot_ts]
+    else:
+        filtered_trade_dfs = trade_dfs
+        filtered_wrap_trade_df = wrap_trade_df
+        filtered_cash_df = cash_df
     
-    def calculate_strategy_by_type(type_filter, exchange_rate):
+    def calculate_strategy_by_type(type_filter, exchange_rate, use_trade_dfs=None, use_cash_df=None):
+        use_trade_dfs = use_trade_dfs or trade_dfs
+        use_cash_df = use_cash_df if use_cash_df is not None else cash_df
+
         value = 0
         current_profit = 0
         actual_profit = 0
@@ -912,24 +993,64 @@ if selected_tab == "성과":
             "return": round(return_rate, 1)
         }
     
-    strategy_1 = calculate_strategy_by_type(["S&P", "나스닥", "TDF"], exchange_rate)
+    strategy_1 = calculate_strategy_by_type(["S&P", "나스닥", "TDF"], exchange_rate, use_trade_dfs=filtered_trade_dfs, use_cash_df=filtered_cash_df)
     us_market_value = strategy_1["value"]
     us_market_profit = strategy_1["profit"]
     us_market_return = strategy_1["return"]
 
-    strategy_2 = calculate_strategy_by_type("전력", exchange_rate)
+    strategy_2 = calculate_strategy_by_type("전력", exchange_rate, use_trade_dfs=filtered_trade_dfs, use_cash_df=filtered_cash_df)
     us_ai_value = strategy_2["value"]
     us_ai_profit = strategy_2["profit"]
     us_ai_return = strategy_2["return"]
     
-    wrap_value = wrap_value_usd * exchange_rate
-    wrap_profit = (wrap_value_usd - wrap_capital_usd) * exchange_rate
-    wrap_return = ((wrap_value_usd - wrap_capital_usd) / wrap_capital_usd * 100) if wrap_capital_usd > 0 else 0
+    if SNAPSHOT_DATE and not filtered_wrap_trade_df.empty:
+        # 기준일 기준: 거래내역으로 계산
+        snapshot_ts = pd.Timestamp(SNAPSHOT_DATE)
+        wrap_capital_usd_snap = filtered_cash_df[
+            (filtered_cash_df["계좌명"] == "WRAP") & (filtered_cash_df["구분"] == "입금")
+        ]["금액"].sum()
+
+        wrap_holdings = {}
+        wrap_avg_prices = {}
+        for _, row in filtered_wrap_trade_df.sort_values("거래일").iterrows():
+            code = str(row["종목코드"])
+            qty = row["수량"]
+            price = row["단가"]
+            fee = row["제세금"]
+            amt = row["거래금액"]
+            if row["구분"] == "매수":
+                prev_qty = wrap_holdings.get(code, 0)
+                prev_avg = wrap_avg_prices.get(code, 0)
+                total_cost = prev_avg * prev_qty + amt + fee
+                new_qty = prev_qty + qty
+                wrap_holdings[code] = new_qty
+                wrap_avg_prices[code] = total_cost / new_qty if new_qty else 0
+            else:
+                wrap_holdings[code] = wrap_holdings.get(code, 0) - qty
+
+        wrap_value_usd_snap = 0
+        for code, hold_qty in wrap_holdings.items():
+            if hold_qty > 0:
+                p = price_map.get(code, {}).get("current", 0)
+                wrap_value_usd_snap += p * hold_qty
+
+        wrap_value = wrap_value_usd_snap * exchange_rate
+        wrap_profit = (wrap_value_usd_snap - wrap_capital_usd_snap) * exchange_rate
+        wrap_return = ((wrap_value_usd_snap - wrap_capital_usd_snap) / wrap_capital_usd_snap * 100) if wrap_capital_usd_snap > 0 else 0
+    else:
+        # 현재가 기준: 기존 방식
+        wrap_value = wrap_value_usd * exchange_rate
+        wrap_profit = (wrap_value_usd - wrap_capital_usd) * exchange_rate
+        wrap_return = ((wrap_value_usd - wrap_capital_usd) / wrap_capital_usd * 100) if wrap_capital_usd > 0 else 0
     
     try:
         lv_df = conn.read(worksheet="LV")
         lv_df.columns = lv_df.columns.str.strip()
+        lv_df["거래일"] = pd.to_datetime(lv_df["거래일"])
+        if SNAPSHOT_DATE:
+            lv_df = lv_df[lv_df["거래일"] <= pd.Timestamp(SNAPSHOT_DATE)]
         lv_profit = pd.to_numeric(lv_df["손익"], errors="coerce").sum()
+
         lv_capital = 10000000
         lv_value = lv_profit + lv_capital
         lv_return = (lv_profit / lv_capital * 100) if lv_capital > 0 else 0
@@ -939,8 +1060,8 @@ if selected_tab == "성과":
         lv_profit = 0
         lv_return = 0
     
-    df_trade_etf = trade_dfs["ETF"]
-    df_cash_etf = cash_df[cash_df["계좌명"] == "ETF"]
+    df_trade_etf = filtered_trade_dfs["ETF"]
+    df_cash_etf = filtered_cash_df[filtered_cash_df["계좌명"] == "ETF"]
     df_s_etf, s_etf = calculate_account_summary(df_trade_etf, df_cash_etf, df_dividend, price_map)
     
     etf_value = s_etf["current_value"]
