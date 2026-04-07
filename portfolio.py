@@ -10,6 +10,22 @@ from textwrap import dedent
 # --- 기본 설정 ---
 ACCOUNT_NAMES = ["ISA", "Pension", "IRP", "ETF", "US", "사주", "LV"]
 
+# ============================================================
+# 기준일자 설정 (None = 현재가 기준 / 날짜 입력시 해당일 기준)
+# 예시: REFERENCE_DATE = "2026-02-28"
+# ============================================================
+
+REFERENCE_DATE = "2026-03-31"  # None or "YYYY-MM-DD"
+
+# 기준일 파싱
+if REFERENCE_DATE:
+    ref_date = pd.Timestamp(REFERENCE_DATE)
+    is_historical = True
+else:
+    ref_date = pd.Timestamp(datetime.now().date())
+    is_historical = False
+
+
 # --- 엑셀 파일 경로 설정 ---
 conn = st.connection("gsheets", type=GSheetsConnection)
 
@@ -23,7 +39,19 @@ try:
 
     # WRAP 시트에서 환율(O열, 첫 번째 행) 읽기
     exchange_rate_df = conn.read(worksheet="WRAP", usecols=[14], nrows=1, header=None)
-    exchange_rate = float(exchange_rate_df.iloc[0, 0]) if not exchange_rate_df.empty else 1400
+
+    # 환율 조회
+    exchange_rate_sheet = float(exchange_rate_df.iloc[0, 0]) if not exchange_rate_df.empty else 1400
+
+    if is_historical:
+        try:
+            start = ref_date - timedelta(days=10)
+            fx_data = fdr.DataReader("USD/KRW", start=start, end=ref_date)
+            exchange_rate = float(fx_data.iloc[-1]["Close"]) if not fx_data.empty else exchange_rate_sheet
+        except:
+            exchange_rate = exchange_rate_sheet
+    else:
+        exchange_rate = exchange_rate_sheet
 
     # 각 계좌 시트 불러오기
     TRADE_SHEET_NAMES = [name for name in ACCOUNT_NAMES if name not in ["LV"]]
@@ -80,22 +108,32 @@ def get_price_data(code: str, source: str = "fdr"):
         return yf.download(code, period="5d")
 
 @st.cache_data(ttl=300)
-def get_all_prices(codes: tuple) -> dict:
+def get_all_prices(codes: tuple, ref_date: pd.Timestamp = None) -> dict:
     import concurrent.futures
-    
+
     def fetch(code):
         try:
-            data = fdr.DataReader(code)
-            return code, {
-                "current": float(data.iloc[-1]["Close"]),
-                "prev":    float(data.iloc[-2]["Close"])
-            }
+            if ref_date and (pd.Timestamp(datetime.now().date()) - ref_date).days > 1:
+                # 기준일 종가 조회
+                start = ref_date - timedelta(days=10)
+                data = fdr.DataReader(code, start=start, end=ref_date)
+                if data.empty:
+                    return code, {"current": 0, "prev": 0}
+                current = float(data.iloc[-1]["Close"])
+                prev = float(data.iloc[-2]["Close"]) if len(data) >= 2 else current
+            else:
+                data = fdr.DataReader(code)
+                if data.empty:
+                    return code, {"current": 0, "prev": 0}
+                current = float(data.iloc[-1]["Close"])
+                prev = float(data.iloc[-2]["Close"]) if len(data) >= 2 else current
+            return code, {"current": current, "prev": prev}
         except:
             return code, {"current": 0, "prev": 0}
-    
+
     with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
         results = executor.map(fetch, codes)
-    
+
     return dict(results)
 
 def calculate_account_summary(df_trade, df_cash, df_dividend, price_map, is_us_stock=False):
@@ -514,8 +552,18 @@ for acct_name in ["ISA", "Pension", "IRP", "ETF", "US"]:
     all_codes.update(df_t["종목코드"].astype(str).unique())
 all_codes.discard("펀드")
 
+# 기준일 필터링
+if is_historical:
+    cash_df = cash_df[cash_df["거래일"] <= ref_date]
+    for acct_name in TRADE_SHEET_NAMES:
+        trade_dfs[acct_name] = trade_dfs[acct_name][
+            trade_dfs[acct_name]["거래일"] <= ref_date
+        ]
+    df_dividend = df_dividend[pd.to_datetime(df_dividend["배당일"]) <= ref_date] \
+        if "배당일" in df_dividend.columns else df_dividend
+
 # 한 번에 병렬 조회
-price_map = get_all_prices(tuple(all_codes))
+price_map = get_all_prices(tuple(all_codes), ref_date=ref_date if is_historical else None)
 
 local_accounts = ["ISA", "Pension", "IRP", "ETF"]
 local_total_summary = {
@@ -929,7 +977,11 @@ if selected_tab == "성과":
     try:
         lv_df = conn.read(worksheet="LV")
         lv_df.columns = lv_df.columns.str.strip()
+        lv_df["거래일"] = pd.to_datetime(lv_df["거래일"])
+        if is_historical:
+            lv_df = lv_df[lv_df["거래일"] <= ref_date]
         lv_profit = pd.to_numeric(lv_df["손익"], errors="coerce").sum()
+        
         lv_capital = 10000000
         lv_value = lv_profit + lv_capital
         lv_return = (lv_profit / lv_capital * 100) if lv_capital > 0 else 0
