@@ -7,6 +7,10 @@ from streamlit_option_menu import option_menu
 from streamlit_gsheets import GSheetsConnection
 from textwrap import dedent
 
+
+# --- Streamlit 구성시작 ---
+st.set_page_config(layout="wide")
+
 # --- 기본 설정 ---
 ACCOUNT_NAMES = ["ISA", "Pension", "IRP", "ETF", "US", "사주", "LV"]
 
@@ -15,7 +19,7 @@ ACCOUNT_NAMES = ["ISA", "Pension", "IRP", "ETF", "US", "사주", "LV"]
 # 예시: REFERENCE_DATE = "2026-02-28"
 # ============================================================
 
-REFERENCE_DATE = "2026-02-27"  # None or "YYYY-MM-DD"
+REFERENCE_DATE = None  # None or "YYYY-MM-DD"
 
 # 기준일 파싱
 if REFERENCE_DATE:
@@ -41,7 +45,7 @@ try:
     exchange_rate_df = conn.read(worksheet="WRAP", usecols=[14], nrows=1, header=None)
 
     # 환율 조회
-    exchange_rate_sheet = float(exchange_rate_df.iloc[0, 0]) if not exchange_rate_df.empty else 1400
+    exchange_rate_sheet = float(exchange_rate_df.iloc[0, 0]) if not exchange_rate_df.empty else 1450
 
     if is_historical:
         try:
@@ -343,8 +347,6 @@ def calculate_strategy_summary(df_trade, df_cash, df_dividend_filtered, is_us_st
 
     return df_summary, summary
 
-# --- Streamlit 구성시작 ---
-st.set_page_config(layout="wide")
 
 # --- 스타일 정의 ---
 st.markdown("""
