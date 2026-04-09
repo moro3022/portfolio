@@ -669,7 +669,7 @@ card_html_profit = f"""
         <div class="card-item" style="width: 47%;">
             <div style="display: flex; align-items: center; gap: 6px;">
                 <img src="{icon_wallet}" width="20" height="20" />
-                <span class="item-label">Actual</span>
+                <span class="item-label">Realized</span>
             </div>
             <div class="item-return">{currency_symbol}{actual_profit:,.0f}</div>
             <div class="badge">+{actual_profit_rate:.2f}%</div>
