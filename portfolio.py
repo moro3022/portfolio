@@ -566,7 +566,7 @@ for acct_name in ["ISA", "Pension", "IRP", "ETF", "US"]:
 all_codes.discard("펀드")
 us_codes.discard("펀드")
 for code in list(all_codes):
-    if code.endswith(".KS"):
+    if str(code).endswith(".KS"):
         all_codes.discard(code)
 
 # 기준일 필터링
