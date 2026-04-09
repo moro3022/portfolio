@@ -178,7 +178,7 @@ def calculate_account_summary(df_trade, df_cash, df_dividend, price_map, is_us_s
 
         if hold_qty > 0:
             try:
-                if str(code) == "펀드":
+                if str(code) == "펀드" or str(code).endswith(".KS"):
                     current_price = group["현재가"].dropna().iloc[-1] if "현재가" in group.columns else 0
                     prev_close = current_price
                 else:
@@ -565,6 +565,9 @@ for acct_name in ["ISA", "Pension", "IRP", "ETF", "US"]:
         us_codes.update(codes)  # 추가
 all_codes.discard("펀드")
 us_codes.discard("펀드")
+for code in list(all_codes):
+    if code.endswith(".KS"):
+        all_codes.discard(code)
 
 # 기준일 필터링
 if is_historical:
