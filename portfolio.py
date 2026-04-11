@@ -817,7 +817,7 @@ if not df_summary.empty:
 
         card_html_stock += dedent(f"""
         <div class="stock-item" style="display: flex; justify-content: space-between; align-items: center; margin-bottom:10px;">
-            <div style="flex: 3.5; display: flex; align-items: center; gap: 10px; min-width: 0;" >
+            <div style="flex: 3.3; display: flex; align-items: center; gap: 10px; min-width: 0;" >
                 {icon_html}
                 <div>
                     <div class="stock-label" style="font-weight:600;">{name}</div>
@@ -826,7 +826,7 @@ if not df_summary.empty:
                     </div>
                 </div>
             </div>
-            <div style="flex: 1; text-align: right; display: flex; flex-direction: column; justify-content: center; gap:4px;">
+            <div style="flex: 1.3; text-align: right; display: flex; flex-direction: column; justify-content: center; gap:4px;">
                 <div style="font-size: 14px; font-weight: 500; color:#666; line-height: 22px;">
                     @ {currency_symbol}{current_price:,.0f}
                 </div>
