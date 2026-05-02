@@ -1181,7 +1181,7 @@ if selected_tab == "성과":
         monthly_totals = performance_df.groupby("기준일").agg({
             "평가액": "sum",
             "누적수익": "sum",
-            "손익변동": "sum"
+            "월간수익": "sum"
         }).reset_index().sort_values("기준일", ascending=False)
 
         recent_3_months = monthly_totals.head(3)
@@ -1277,7 +1277,7 @@ if selected_tab == "성과":
                     mom_change = total_mom
                 else:
                     total_asset = int(row["평가액"])
-                    mom_change = int(row["손익변동"]) if pd.notna(row["손익변동"]) else 0
+                    mom_change = int(row["월간수익"]) if pd.notna(row["월간수익"]) else 0
                 
                 sign = "+" if mom_change >= 0 else ""
                 
