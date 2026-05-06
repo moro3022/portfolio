@@ -178,7 +178,7 @@ def calculate_account_summary(df_trade, df_cash, df_dividend, price_map, is_us_s
 
         if hold_qty > 0:
             try:
-                if str(code) == "펀드" or str(code).endswith(".KS"):
+                if str(code) == "펀드":
                     current_price = group["현재가"].dropna().iloc[-1] if "현재가" in group.columns else 0
                     prev_close = current_price
                 else:
@@ -504,6 +504,35 @@ html, body, .stApp, * {
 .strategy-amount { font-size: 28px; font-weight: 700; }
 .strategy-profit { font-size: 16px; font-weight: 600; opacity: 0.8; }            
 
+.tooltip-wrap {
+    position: relative;
+    display: inline-block;
+    cursor: default;
+}
+.tooltip-wrap .tooltip-box {
+    visibility: hidden;
+    opacity: 0;
+    background-color: #2C3E50;
+    color: white;
+    font-size: 13px;
+    font-weight: 500;
+    border-radius: 8px;
+    padding: 10px 14px;
+    position: absolute;
+    z-index: 100;
+    bottom: 125%;
+    left: 50%;
+    transform: translateX(-50%);
+    white-space: nowrap;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    transition: opacity 0.2s;
+    line-height: 22px;
+}
+.tooltip-wrap:hover .tooltip-box {
+    visibility: visible;
+    opacity: 1;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -565,9 +594,6 @@ for acct_name in ["ISA", "Pension", "IRP", "ETF", "US"]:
         us_codes.update(codes)  # 추가
 all_codes.discard("펀드")
 us_codes.discard("펀드")
-for code in list(all_codes):
-    if str(code).endswith(".KS"):
-        all_codes.discard(code)
 
 # 기준일 필터링
 if is_historical:
@@ -669,7 +695,7 @@ card_html_profit = f"""
         <div class="card-item" style="width: 47%;">
             <div style="display: flex; align-items: center; gap: 6px;">
                 <img src="{icon_wallet}" width="20" height="20" />
-                <span class="item-label">Realized</span>
+                <span class="item-label">Actual</span>
             </div>
             <div class="item-return">{currency_symbol}{actual_profit:,.0f}</div>
             <div class="badge">+{actual_profit_rate:.2f}%</div>
@@ -817,7 +843,7 @@ if not df_summary.empty:
 
         card_html_stock += dedent(f"""
         <div class="stock-item" style="display: flex; justify-content: space-between; align-items: center; margin-bottom:10px;">
-            <div style="flex: 3.3; display: flex; align-items: center; gap: 10px; min-width: 0;" >
+            <div style="flex: 3.2; display: flex; align-items: center; gap: 10px; min-width: 0;" >
                 {icon_html}
                 <div>
                     <div class="stock-label" style="font-weight:600;">{name}</div>
@@ -826,7 +852,7 @@ if not df_summary.empty:
                     </div>
                 </div>
             </div>
-            <div style="flex: 1.3; text-align: right; display: flex; flex-direction: column; justify-content: center; gap:4px;">
+            <div style="flex: 1.2; text-align: right; display: flex; flex-direction: column; justify-content: center; gap:4px;">
                 <div style="font-size: 14px; font-weight: 500; color:#666; line-height: 22px;">
                     @ {currency_symbol}{current_price:,.0f}
                 </div>
@@ -834,7 +860,7 @@ if not df_summary.empty:
                     @ {currency_symbol}{avg_price:,.0f}
                 </div>
             </div>
-            <div style="flex: 1.5; text-align: right; display: flex; flex-direction: column; justify-content: center; gap:4px;">
+            <div style="flex: 1.6; text-align: right; display: flex; flex-direction: column; justify-content: center; gap:4px;">
                 <div style="font-size: 14px; font-weight: 500; color:#666; line-height: 22px;">
                     {currency_symbol}{stock_value:,.0f}
                 </div>
@@ -842,7 +868,7 @@ if not df_summary.empty:
                     {currency_symbol}{purchase_value:,.0f}
                 </div>
             </div>
-            <div style="flex: 1.7; text-align: right; display: flex; flex-direction: column; justify-content: center; gap:4px;">
+            <div style="flex: 1.8; text-align: right; display: flex; flex-direction: column; justify-content: center; gap:4px;">
                 <div style="font-size: 18px; font-weight: bold; color:{green_color if profit >= 0 else red_color}; line-height: 22px;">
                     {currency_symbol}{profit:,.0f}
                 </div>
@@ -978,12 +1004,13 @@ if selected_tab == "성과":
         }
     
     strategy_1 = calculate_strategy_by_type(["S&P", "나스닥", "TDF"], exchange_rate)
+
     us_market_value = strategy_1["value"]
     us_market_profit = strategy_1["profit"]
     us_market_return = strategy_1["return"]
 
     strategy_2 = calculate_strategy_by_type("전력", exchange_rate)
-    
+
     us_ai_value = strategy_2["value"]
     us_ai_profit = strategy_2["profit"]
     us_ai_return = strategy_2["return"]
@@ -1018,15 +1045,17 @@ if selected_tab == "성과":
     etf_return = s_etf["total_profit_rate"]
  
     strategies = [
-        {"name": "US Market Index",    "value": int(us_market_value), "profit": int(us_market_profit), "rate": round(us_market_return, 1), "color": "#412f95"},
-        {"name": "US AI Power & Grid", "value": int(us_ai_value),     "profit": int(us_ai_profit),     "rate": round(us_ai_return, 1),    "color": "#7875f4"},
-        {"name": "US Managed WRAP",    "value": int(wrap_value),      "profit": int(wrap_profit),      "rate": round(wrap_return, 1),     "color": "#ffb601"},
-        {"name": "KR Index Leverage",  "value": int(lv_value),        "profit": int(lv_profit),        "rate": round(lv_return, 1),       "color": "#ff7f05"},
-        {"name": "KR Sector ETFs",     "value": int(etf_value),       "profit": int(etf_profit),       "rate": round(etf_return, 1),      "color": "#ff76a6"},
+        {"name": "US Market Index",    "value": int(us_market_value), "profit": int(us_market_profit), "rate": round(us_market_return, 1), "color": "#412f95", "current_profit": int(strategy_1["current_profit"]), "actual_profit": int(strategy_1["actual_profit"])},
+        {"name": "US AI Power & Grid", "value": int(us_ai_value),     "profit": int(us_ai_profit),     "rate": round(us_ai_return, 1),    "color": "#7875f4", "current_profit": int(strategy_2["current_profit"]), "actual_profit": int(strategy_2["actual_profit"])},
+        {"name": "US Managed WRAP",    "value": int(wrap_value),      "profit": int(wrap_profit),      "rate": round(wrap_return, 1),     "color": "#ffb601", "current_profit": int(wrap_profit), "actual_profit": 0},
+        {"name": "KR Index Leverage",  "value": int(lv_value),        "profit": int(lv_profit),        "rate": round(lv_return, 1),       "color": "#ff7f05", "current_profit": 0,   "actual_profit": int(lv_profit)},
+        {"name": "KR Sector ETFs",     "value": int(etf_value),       "profit": int(etf_profit),       "rate": round(etf_return, 1),      "color": "#ff76a6", "current_profit": int(s_etf["current_profit"]), "actual_profit": int(s_etf["actual_profit"])},
     ]
     
     total_strategy_value = sum(s["value"] for s in strategies)
     total_strategy_profit = sum(s["profit"] for s in strategies)
+    total_strategy_current_profit = sum(s["current_profit"] for s in strategies)  
+    total_strategy_actual_profit = sum(s["actual_profit"] for s in strategies)    
     
     for strategy in strategies:
         strategy["weight"] = round((strategy["value"] / total_strategy_value * 100), 1) if total_strategy_value > 0 else 0
@@ -1045,7 +1074,13 @@ if selected_tab == "성과":
         <div class="profit-section">
             <div class="profit-label">Total Profit</div>
             <div class="profit-row">
-                <div class="profit-amount">+{total_profit_ov:,}</div>
+                <div class="tooltip-wrap">
+                    <div class="profit-amount">+{total_profit_ov:,}</div>
+                    <div class="tooltip-box">
+                        미실현 &nbsp;+{total_strategy_current_profit:,}<br>
+                        실현 &nbsp;&nbsp;&nbsp;+{total_strategy_actual_profit:,}
+                    </div>
+                </div>
                 <div class="profit-badge">+{total_profit_rate_ov}%</div>
             </div>
         </div>
@@ -1139,8 +1174,14 @@ if selected_tab == "성과":
                 </div>
                 <div style="text-align: right; display: flex; flex-direction: column; gap: 6px;">
                     <div style="font-size: 17px; font-weight: 600; color: #2C3E50;">{strategy['value']:,}</div>
-                    <div style="font-size: 15px; font-weight: 600; color: {'#3A866A' if strategy['profit'] >= 0 else '#C54E4A'};">
-                        {'+' if strategy['profit'] >= 0 else ''}{strategy['profit']:,}
+                    <div class="tooltip-wrap" style="text-align: right;">
+                        <div style="font-size: 15px; font-weight: 600; color: {'#3A866A' if strategy['profit'] >= 0 else '#C54E4A'};">
+                            {'+' if strategy['profit'] >= 0 else ''}{strategy['profit']:,}
+                        </div>
+                        <div class="tooltip-box">
+                            미실현 &nbsp;{'+' if strategy['current_profit'] >= 0 else ''}{strategy['current_profit']:,}<br>
+                            실현 &nbsp;&nbsp;&nbsp;{'+' if strategy['actual_profit'] >= 0 else ''}{strategy['actual_profit']:,}
+                        </div>
                     </div>
                 </div>
                 <div style="text-align: right;">
