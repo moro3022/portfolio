@@ -41,11 +41,11 @@ try:
     cash_df.columns = cash_df.columns.str.strip()
     cash_df["거래일"] = pd.to_datetime(cash_df["거래일"])
 
-    # WRAP 시트에서 환율(O열, 첫 번째 행) 읽기
-    exchange_rate_df = conn.read(worksheet="WRAP", usecols=[14], nrows=1, header=None)
-
-    # 환율 조회
-    exchange_rate_sheet = float(exchange_rate_df.iloc[0, 0]) if not exchange_rate_df.empty else 1450
+    # WRAP 시트에서 읽기
+    wrap_df = conn.read(worksheet="WRAP", usecols=[10, 12, 14], nrows=1, header=None)
+    wrap_capital_usd = float(wrap_df.iloc[0, 0]) if not wrap_df.empty else 0
+    wrap_value_usd   = float(wrap_df.iloc[0, 1]) if not wrap_df.empty else 0
+    exchange_rate_sheet = float(wrap_df.iloc[0, 2]) if not wrap_df.empty else 1450
 
     if is_historical:
         try:
@@ -88,12 +88,6 @@ try:
     df_dividend.columns = df_dividend.columns.str.strip()
     df_dividend["배당금"] = pd.to_numeric(df_dividend["배당금"], errors="coerce").fillna(0).astype(int)
 
-    # WRAP 시트에서 K1(원금), M1(평가액) 셀 읽기
-    wrap_capital_df = conn.read(worksheet="WRAP", usecols=[10], nrows=1, header=None)
-    wrap_capital_usd = float(wrap_capital_df.iloc[0, 0]) if not wrap_capital_df.empty else 0
-
-    wrap_value_df = conn.read(worksheet="WRAP", usecols=[12], nrows=1, header=None)
-    wrap_value_usd = float(wrap_value_df.iloc[0, 0]) if not wrap_value_df.empty else 0
 
     # 원화 환산
     wrap_capital = wrap_capital_usd * exchange_rate
@@ -178,7 +172,7 @@ def calculate_account_summary(df_trade, df_cash, df_dividend, price_map, is_us_s
 
         if hold_qty > 0:
             try:
-                if str(code) == "펀드" or str(code).endswith(".KS"):
+                if str(code) == "펀드" or (str(code).endswith(".KS") and price_map.get(str(code), {}).get("current", 0) == 0):
                     current_price = group["현재가"].dropna().iloc[-1] if "현재가" in group.columns else 0
                     prev_close = current_price
                 else:
@@ -589,12 +583,9 @@ us_codes = set()  # 추가
 for acct_name in ["ISA", "Pension", "IRP", "ETF", "US"]:
     df_t = trade_dfs[acct_name]
     codes = df_t["종목코드"].astype(str).unique()
-    for code in codes:
-        if acct_name == "ETF" and str(code).endswith(".KS"):
-            continue  # 가격 조회 대상에서 제외
-        all_codes.add(code)
+    all_codes.update(codes)
     if acct_name == "US":
-        us_codes.update(codes)
+        us_codes.update(codes)  # 추가
 all_codes.discard("펀드")
 us_codes.discard("펀드")
 
