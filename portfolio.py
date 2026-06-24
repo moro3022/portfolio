@@ -12,7 +12,7 @@ from textwrap import dedent
 st.set_page_config(layout="wide")
 
 # --- 기본 설정 ---
-ACCOUNT_NAMES = ["ISA", "Pension", "IRP", "ETF", "US", "사주", "LV"]
+ACCOUNT_NAMES = ["ISA", "Pension", "IRP", "ETF", "US", "사주", "kWRAP"]
 
 # ============================================================
 # 기준일자 설정 (None = 현재가 기준 / 날짜 입력시 해당일 기준)
@@ -20,6 +20,10 @@ ACCOUNT_NAMES = ["ISA", "Pension", "IRP", "ETF", "US", "사주", "LV"]
 # ============================================================
 
 REFERENCE_DATE = None  # None or "YYYY-MM-DD"
+
+KR_ALPHA_WRAP_NAME = "KR Alpha WRAP"
+KR_ALPHA_WRAP_ACCOUNT = "kWRAP"
+KR_ALPHA_WRAP_SOURCE_NAMES = [KR_ALPHA_WRAP_NAME, "KR WRAP"]
 
 # 기준일 파싱
 if REFERENCE_DATE:
@@ -58,7 +62,7 @@ try:
         exchange_rate = exchange_rate_sheet
 
     # 각 계좌 시트 불러오기
-    TRADE_SHEET_NAMES = [name for name in ACCOUNT_NAMES if name not in ["LV"]]
+    TRADE_SHEET_NAMES = [name for name in ACCOUNT_NAMES if name not in [KR_ALPHA_WRAP_ACCOUNT]]
 
     trade_dfs = {
         acct: conn.read(worksheet=acct)
@@ -128,10 +132,11 @@ def get_all_prices(codes: tuple, us_codes: tuple, ref_date: pd.Timestamp = None)
                 else:
                     data = fdr.DataReader(code)
 
-            if data.empty:
+            close = data["Close"].dropna()
+            if close.empty:
                 return code, {"current": 0, "prev": 0}
-            current = float(data["Close"].iloc[-1])
-            prev = float(data["Close"].iloc[-2]) if len(data) >= 2 else current
+            current = float(close.iloc[-1])
+            prev = float(close.iloc[-2]) if len(close) >= 2 else current
             return code, {"current": current, "prev": prev}
         except:
             return code, {"current": 0, "prev": 0}
@@ -1014,7 +1019,7 @@ if selected_tab == "성과":
     wrap_return = ((wrap_value_usd - wrap_capital_usd) / wrap_capital_usd * 100) if wrap_capital_usd > 0 else 0
     
     try:
-        lv_df = conn.read(worksheet="LV")
+        lv_df = conn.read(worksheet=KR_ALPHA_WRAP_ACCOUNT)
         lv_df.columns = lv_df.columns.str.strip()
         lv_df["거래일"] = pd.to_datetime(lv_df["거래일"])
         if is_historical:
@@ -1025,7 +1030,7 @@ if selected_tab == "성과":
         lv_value = lv_profit + lv_capital
         lv_return = (lv_profit / lv_capital * 100) if lv_capital > 0 else 0
     except Exception as e:
-        st.warning(f"LV 데이터 로드 실패: {e}")
+        st.warning(f"{KR_ALPHA_WRAP_ACCOUNT} 데이터 로드 실패: {e}")
         lv_value = 0
         lv_profit = 0
         lv_return = 0
@@ -1042,7 +1047,7 @@ if selected_tab == "성과":
         {"name": "US Market Index",    "value": int(us_market_value), "profit": int(us_market_profit), "rate": round(us_market_return, 1), "color": "#412f95", "current_profit": int(strategy_1["current_profit"]), "actual_profit": int(strategy_1["actual_profit"])},
         {"name": "US AI Power & Grid", "value": int(us_ai_value),     "profit": int(us_ai_profit),     "rate": round(us_ai_return, 1),    "color": "#7875f4", "current_profit": int(strategy_2["current_profit"]), "actual_profit": int(strategy_2["actual_profit"])},
         {"name": "US Managed WRAP",    "value": int(wrap_value),      "profit": int(wrap_profit),      "rate": round(wrap_return, 1),     "color": "#ffb601", "current_profit": int(wrap_profit), "actual_profit": 0},
-        {"name": "KR Index Leverage",  "value": int(lv_value),        "profit": int(lv_profit),        "rate": round(lv_return, 1),       "color": "#ff7f05", "current_profit": 0,   "actual_profit": int(lv_profit)},
+        {"name": KR_ALPHA_WRAP_NAME,   "value": int(lv_value),        "profit": int(lv_profit),        "rate": round(lv_return, 1),       "color": "#ff7f05", "current_profit": 0,   "actual_profit": int(lv_profit)},
         {"name": "KR Sector ETFs",     "value": int(etf_value),       "profit": int(etf_profit),       "rate": round(etf_return, 1),      "color": "#ff76a6", "current_profit": int(s_etf["current_profit"]), "actual_profit": int(s_etf["actual_profit"])},
     ]
     
@@ -1278,7 +1283,8 @@ if selected_tab == "성과":
                     return current_val - prev_val - purchase
 
                 prev_us_wrap_profit = int(prev_month_strategies[prev_month_strategies["전략"] == "US Wrap"]["누적수익"].values[0]) if len(prev_month_strategies[prev_month_strategies["전략"] == "US Wrap"]) > 0 else 0
-                prev_kr_leverage = int(prev_month_strategies[prev_month_strategies["전략"] == "KR Leverage"]["평가액"].values[0]) if len(prev_month_strategies[prev_month_strategies["전략"] == "KR Leverage"]) > 0 else 0
+                prev_kr_leverage_rows = prev_month_strategies[prev_month_strategies["전략"].isin(KR_ALPHA_WRAP_SOURCE_NAMES)]
+                prev_kr_leverage = int(prev_kr_leverage_rows["평가액"].values[0]) if not prev_kr_leverage_rows.empty else 0
 
                 prev_us_market_profit = int(prev_month_strategies[prev_month_strategies["전략"] == "US Market"]["누적수익"].values[0]) if len(prev_month_strategies[prev_month_strategies["전략"] == "US Market"]) > 0 else 0
                 prev_us_ai_profit = int(prev_month_strategies[prev_month_strategies["전략"] == "US AI Power"]["누적수익"].values[0]) if len(prev_month_strategies[prev_month_strategies["전략"] == "US AI Power"]) > 0 else 0
@@ -1341,7 +1347,7 @@ if selected_tab == "성과":
                 <div style="text-align: right; margin-right: 6px;">US Market</div>
                 <div style="text-align: right; margin-right: 24px;">US AI</div>
                 <div style="text-align: right; margin-right: 8px;">US WRAP</div>
-                <div style="text-align: right;">KR Leverage</div>
+                <div style="text-align: right;">KR Alpha WRAP</div>
                 <div style="text-align: right; margin-right: 15px;">KR ETF</div>
                 <div style="text-align: right; margin-right: 18px;">Total</div>
             </div>
@@ -1374,7 +1380,8 @@ if selected_tab == "성과":
                     us_market_val = int(month_strategies[month_strategies["전략"] == "US Market"]["평가액"].values[0]) if len(month_strategies[month_strategies["전략"] == "US Market"]) > 0 else 0
                     us_ai_val = int(month_strategies[month_strategies["전략"] == "US AI Power"]["평가액"].values[0]) if len(month_strategies[month_strategies["전략"] == "US AI Power"]) > 0 else 0
                     us_wrap_val = int(month_strategies[month_strategies["전략"] == "US Wrap"]["평가액"].values[0]) if len(month_strategies[month_strategies["전략"] == "US Wrap"]) > 0 else 0
-                    kr_leverage_val = int(month_strategies[month_strategies["전략"] == "KR Leverage"]["평가액"].values[0]) if len(month_strategies[month_strategies["전략"] == "KR Leverage"]) > 0 else 0
+                    kr_leverage_rows = month_strategies[month_strategies["전략"].isin(KR_ALPHA_WRAP_SOURCE_NAMES)]
+                    kr_leverage_val = int(kr_leverage_rows["평가액"].values[0]) if not kr_leverage_rows.empty else 0
                     kr_sector_val = int(month_strategies[month_strategies["전략"] == "KR Sector"]["평가액"].values[0]) if len(month_strategies[month_strategies["전략"] == "KR Sector"]) > 0 else 0
                     
                     total_row = monthly_totals[monthly_totals["기준일"] == month_date]
@@ -1385,7 +1392,7 @@ if selected_tab == "성과":
                         us_market_rate = float(month_strategies[month_strategies["전략"] == "US Market"]["월간수익률"].values[0]) if len(month_strategies[month_strategies["전략"] == "US Market"]) > 0 else 0
                         us_ai_rate = float(month_strategies[month_strategies["전략"] == "US AI Power"]["월간수익률"].values[0]) if len(month_strategies[month_strategies["전략"] == "US AI Power"]) > 0 else 0
                         us_wrap_rate = float(month_strategies[month_strategies["전략"] == "US Wrap"]["월간수익률"].values[0]) if len(month_strategies[month_strategies["전략"] == "US Wrap"]) > 0 else 0
-                        kr_leverage_rate = float(month_strategies[month_strategies["전략"] == "KR Leverage"]["월간수익률"].values[0]) if len(month_strategies[month_strategies["전략"] == "KR Leverage"]) > 0 else 0
+                        kr_leverage_rate = float(kr_leverage_rows["월간수익률"].values[0]) if not kr_leverage_rows.empty else 0
                         kr_sector_rate = float(month_strategies[month_strategies["전략"] == "KR Sector"]["월간수익률"].values[0]) if len(month_strategies[month_strategies["전략"] == "KR Sector"]) > 0 else 0
 
                         us_market_indicator = get_indicator(us_market_rate)
