@@ -49,20 +49,22 @@ try:
     cash_df["거래일"] = pd.to_datetime(cash_df["거래일"])
 
     # WRAP 시트에서 읽기
-    wrap_df = conn.read(worksheet="WRAP", usecols=[10, 12, 14], nrows=1, header=None)
+    wrap_df = conn.read(worksheet="WRAP", usecols=[10, 12], nrows=1, header=None)
     wrap_capital_usd = float(wrap_df.iloc[0, 0]) if not wrap_df.empty else 0
     wrap_value_usd   = float(wrap_df.iloc[0, 1]) if not wrap_df.empty else 0
-    exchange_rate_sheet = float(wrap_df.iloc[0, 2]) if not wrap_df.empty else 1450
 
-    if is_historical:
-        try:
+    DEFAULT_EXCHANGE_RATE = 1450  # fdr 조회 실패 시 최종 대체값
+
+    try:
+        if is_historical:
             start = ref_date - timedelta(days=10)
             fx_data = fdr.DataReader("USD/KRW", start=start, end=ref_date)
-            exchange_rate = float(fx_data.iloc[-1]["Close"]) if not fx_data.empty else exchange_rate_sheet
-        except:
-            exchange_rate = exchange_rate_sheet
-    else:
-        exchange_rate = exchange_rate_sheet
+        else:
+            start = pd.Timestamp(datetime.now().date()) - timedelta(days=10)
+            fx_data = fdr.DataReader("USD/KRW", start=start)
+        exchange_rate = float(fx_data.iloc[-1]["Close"]) if not fx_data.empty else DEFAULT_EXCHANGE_RATE
+    except:
+        exchange_rate = DEFAULT_EXCHANGE_RATE
 
     # 각 계좌 시트 불러오기
     TRADE_SHEET_NAMES = ACCOUNT_NAMES
