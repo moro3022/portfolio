@@ -19,7 +19,7 @@ ACCOUNT_NAMES = ["ISA", "ISA2", "Pension", "IRP", "ETF", "US", "Bank"]
 # 예시: REFERENCE_DATE = "2026-02-28"
 # ============================================================
 
-REFERENCE_DATE = "2026-09-30" # None or "YYYY-MM-DD"
+REFERENCE_DATE = None # None or "YYYY-MM-DD"
 
 # ============================================================
 # 수익 정보 노출 설정 (True = 성과 탭에서 수익 관련 정보 숨김, 심리적 안정용)
